@@ -9,17 +9,17 @@
 
 @font-face {
     font-family: 'Avenir Book';
-    src: url('../fonts/Avenir-Book.ttf');
+    src: url('../fonts/Cubic.ttf');
 }
 
 @font-face {
     font-family: 'Avenir Medium';
-    src: url('../fonts/Avenir-Medium.ttf');
+    src: url('../fonts/Cubic.ttf');
 }
 
 @font-face {
     font-family: 'Ringbearer';
-    src: url('../fonts/Ringbearer.ttf');
+    src: url('../fonts/Cubic.ttf');
 }
 
 /*******************************************************************************
@@ -108,8 +108,17 @@ body, button {
 #frameTitleDock {
     padding: 0px 10px;
 }
+#frameTitleImage {
+    position: absolute;
+    left: 10px;
+    height: 20px;
+    width: 20px;
+    border-radius: 0%;
+}
 #frameTitleText {
+    position: relative;
     font-size: 14px;
+    left: 25px;
     font-family: 'Avenir Medium';
     letter-spacing: 0.5px;
 }
@@ -2855,21 +2864,32 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Logo image. */
 #image_seal {
-    height: 70px;
+    height: 230px;
     width: auto;
-    position: relative;
-    border: 2px solid white;
     box-sizing: border-box;
-    border-radius: 50%;
+    border-radius: 0%;
+}
+#image_sealup {
+	opacity: 0;
+	height: 230px;
+    width: auto;
+    position: absolute;
+    box-sizing: border-box;
+    border-radius: 0%;
+    transition: opacity 0.5s ease;
+}
+#image_sealup:hover {
+    opacity: 1;
 }
 
 /* Logo container styles. */
 #image_seal_container {
     position: relative;
-    height: 70px;
-    width: 70px;
+    height: 230px;
+    width: 230px;
     border-radius: 50%;
     margin-top: 50px;
+    margin-right: -180px;
 }
 
 /* Logo container styles w/ update. */
@@ -2886,7 +2906,7 @@ input:checked + .toggleSwitchSlider:before {
     top: 0%;
     left: 0%;
     border-radius: 50%;
-    box-shadow: 0 0 15px #43c628;
+    box-shadow: 0 0 15px #ffab0f;
     animation: glow-grow 4s ease-out infinite;
     background: rgba(0, 0, 0, 0.15);
 }
@@ -3100,6 +3120,14 @@ input:checked + .toggleSwitchSlider:before {
 .mediaButton:focus #settingsSVG,
 .mediaButton:active #settingsSVG {
     height: 23px;
+    animation-name: settingsvg;
+    animation-timing-function: linear;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+}
+@keyframes settingsvg {
+    from {transform: rotate(0.5turn);}
+    to {transform: rotate(1turn);}
 }
 
 /* Settings tooltip styles. */
@@ -3128,6 +3156,36 @@ input:checked + .toggleSwitchSlider:before {
     border-style: solid;
     border-color: transparent transparent transparent rgba(0, 0, 0, 0.75);
 }
+#settingsTooltip2 {
+    visibility: hidden;
+    opacity: 0;
+    width: 75px;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #ffffff;
+    text-align: center;
+    border-radius: 4px;
+    position: absolute;
+    z-index: 1;
+    right: 80%;
+    margin-top: -20px;
+    font-size: 12px;
+    line-height: 20px;
+    transition: visibility 0s linear 0.25s, opacity 0.25s ease;
+}
+#settingsTooltip2::after {
+    content: " ";
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent transparent rgba(0, 0, 0, 0.75);
+}
+.mediaURL:hover #settingsTooltip2,
+.mediaURL:focus #settingsTooltip2,
+.mediaURL:active #settingsTooltip2,
 .mediaButton:hover #settingsTooltip,
 .mediaButton:focus #settingsTooltip,
 .mediaButton:active #settingsTooltip {

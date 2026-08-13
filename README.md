@@ -78,6 +78,16 @@ If you want to export the console output, simply right click anywhere on the con
 
 ## Development
 
+The launcher reads the current MapleCraft distribution from Nebula's stable endpoint:
+
+```text
+http://s3.gfscs.com/maplecraftlauncher/public/maplecraftlauncher/distribution.json
+```
+
+Nebula updates this stable object only after an immutable release has uploaded and passed verification. Do not configure the launcher with a URL containing a release ID.
+
+Deploy Nebula and publish MapleCraft once before distributing this Launcher build. Verify that the URL above returns HTTP `200`; otherwise the Launcher cannot download its distribution.
+
 This section details the setup of a basic developmentment environment.
 
 ### Getting Started

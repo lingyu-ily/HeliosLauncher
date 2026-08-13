@@ -134,6 +134,15 @@ body, button {
 #frameButtonDockWin > .frameButton:not(:first-child) {
     margin-left: -4px;
 }
+#frameButton_update {
+    display: none;
+}
+#frameButton_update[update] {
+    display: inline-block;
+}
+#frameButton_update:not([update]) + .frameButton {
+    margin-left: 0px;
+}
 
 /* Darwin frame button dock: NaN; */
 #frameButtonDockDarwin {

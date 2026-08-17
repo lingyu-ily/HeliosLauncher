@@ -25,6 +25,18 @@
             },
             "mainServer": true,
             "autoconnect": true,
+            "ui": {
+                "hero": {
+                    "background": "https://example.com/westeros/background.webp",
+                    "logo": "https://example.com/westeros/logo.png",
+                    "eyebrow": "WESTEROSCRAFT SERVER",
+                    "title": "WesterosCraft",
+                    "tagline": "Enter the Realm."
+                },
+                "news": {
+                    "rss": "https://forum.westeroscraft.com/forum/news.2/index.rss"
+                }
+            },
             "modules": [
                 {
                     "id": "net.minecraftforge:forge:1.11.2-13.20.1.2429",

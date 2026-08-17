@@ -4243,6 +4243,12 @@ button:disabled {
     overflow: hidden;
     background-position: center;
     background-size: cover;
+    transition: filter 200ms ease, opacity 200ms ease;
+}
+
+#launcherHero[changing] {
+    filter: brightness(0.82);
+    opacity: 0.9;
 }
 
 #launcherHeroShade {
@@ -4263,10 +4269,26 @@ button:disabled {
     filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
 }
 
+#launcherHeroEyebrow {
+    max-width: min(80vw, 620px);
+    margin-bottom: 7px;
+    overflow: hidden;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 2.2px;
+    text-align: center;
+    text-overflow: ellipsis;
+    text-shadow: 0 2px 6px #000;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
 #image_seal {
     width: 105px;
     height: 105px;
     object-fit: contain;
+    transition: opacity 200ms ease;
 }
 
 #launcherHeroWordmark {

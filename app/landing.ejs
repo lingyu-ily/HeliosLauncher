@@ -11,9 +11,10 @@
 
         <div id="landingWorkspaceScroll">
             <main id="landingPlayView">
-                <section id="launcherHero" style="background-image: url('assets/images/backgrounds/<%=bkid%>.jpg');">
+                <section id="launcherHero" data-default-background="assets/images/backgrounds/<%=bkid%>.jpg" style="background-image: url('assets/images/backgrounds/<%=bkid%>.jpg');">
                     <div id="launcherHeroShade"></div>
                     <div id="image_seal_container">
+                        <div id="launcherHeroEyebrow"><%- lang('landing.heroEyebrow') %></div>
                         <img id="image_seal" src="assets/images/Maple.png" alt="MapleCraft"/>
                         <div id="launcherHeroWordmark">MAPLECRAFT</div>
                         <div id="launcherHeroTagline"><%- lang('landing.heroTagline') %></div>
@@ -62,7 +63,7 @@
                     <div id="newsPreviewHeader">
                         <div>
                             <span id="newsPreviewEyebrow"><%- lang('landing.navWhatsNew') %></span>
-                            <h2><%- lang('landing.newsPreviewTitle') %></h2>
+                            <h2 id="newsPreviewTitle"><%- lang('landing.newsPreviewTitle') %></h2>
                         </div>
                         <button id="newsPreviewAction" type="button"><%- lang('landing.newsPreviewAction') %></button>
                     </div>
@@ -76,7 +77,7 @@
                 <div id="newsViewHeader">
                     <div>
                         <span id="newsViewEyebrow">MAPLECRAFT</span>
-                        <h1><%- lang('landing.navUpdates') %></h1>
+                        <h1 id="newsViewTitle"><%- lang('landing.navUpdates') %></h1>
                     </div>
                     <button id="newsBackButton" type="button"><%- lang('landing.backToPlay') %></button>
                 </div>

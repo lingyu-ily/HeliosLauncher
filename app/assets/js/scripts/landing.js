@@ -45,6 +45,25 @@ const serverSidebarList       = document.getElementById('serverSidebarList')
 const selectedServerIcon      = document.getElementById('selectedServerIcon')
 const selectedServerName      = document.getElementById('selectedServerName')
 const selectedServerVersion   = document.getElementById('selectedServerVersion')
+const launcherHero            = document.getElementById('launcherHero')
+const launcherHeroLogo        = document.getElementById('image_seal')
+const launcherHeroEyebrow     = document.getElementById('launcherHeroEyebrow')
+const launcherHeroWordmark    = document.getElementById('launcherHeroWordmark')
+const launcherHeroTagline     = document.getElementById('launcherHeroTagline')
+const newsPreviewEyebrow      = document.getElementById('newsPreviewEyebrow')
+const newsPreviewTitle        = document.getElementById('newsPreviewTitle')
+const newsViewEyebrow         = document.getElementById('newsViewEyebrow')
+
+const defaultServerPresentation = {
+    background: launcherHero.dataset.defaultBackground,
+    logo: launcherHeroLogo.getAttribute('src'),
+    eyebrow: launcherHeroEyebrow.textContent,
+    title: launcherHeroWordmark.textContent,
+    tagline: launcherHeroTagline.textContent,
+    newsEyebrow: newsPreviewEyebrow.textContent,
+    newsTitle: newsPreviewTitle.textContent
+}
+let heroPresentationSequence = 0
 
 const loggerLanding = LoggerUtil.getLogger('Landing')
 const launchButtonDefaultText = launch_button.textContent
@@ -307,6 +326,77 @@ serverSidebarList.addEventListener('keydown', (e) => {
 })
 
 // Bind selected server
+function preloadHeroAsset(source, fallback){
+    const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
+    return new Promise(resolve => {
+        const image = new Image()
+        let settled = false
+        const finish = value => {
+            if(settled){
+                return
+            }
+            settled = true
+            clearTimeout(timeout)
+            resolve(value)
+        }
+        const timeout = setTimeout(() => finish(fallback), 5000)
+        image.onload = () => finish(candidate)
+        image.onerror = () => {
+            if(candidate === fallback){
+                finish(fallback)
+                return
+            }
+            const fallbackImage = new Image()
+            fallbackImage.onload = () => finish(fallback)
+            fallbackImage.onerror = () => finish(fallback)
+            fallbackImage.src = fallback
+        }
+        image.src = candidate
+    })
+}
+
+async function applyServerPresentation(serv){
+    const requestSequence = ++heroPresentationSequence
+    const rawServer = serv?.rawServer
+    const hero = rawServer?.ui?.hero || {}
+    const presentation = {
+        background: hero.background || defaultServerPresentation.background,
+        logo: hero.logo || defaultServerPresentation.logo,
+        eyebrow: hero.eyebrow || defaultServerPresentation.eyebrow,
+        title: hero.title || defaultServerPresentation.title,
+        tagline: hero.tagline || defaultServerPresentation.tagline
+    }
+
+    launcherHeroEyebrow.textContent = presentation.eyebrow
+    launcherHeroWordmark.textContent = presentation.title
+    launcherHeroTagline.textContent = presentation.tagline
+    newsPreviewEyebrow.textContent = presentation.eyebrow || defaultServerPresentation.newsEyebrow
+    newsPreviewTitle.textContent = presentation.title || defaultServerPresentation.newsTitle
+    newsViewEyebrow.textContent = presentation.eyebrow || defaultServerPresentation.title
+
+    const [background, logo] = await Promise.all([
+        preloadHeroAsset(presentation.background, defaultServerPresentation.background),
+        preloadHeroAsset(presentation.logo, defaultServerPresentation.logo)
+    ])
+    if(requestSequence !== heroPresentationSequence){
+        return
+    }
+    launcherHero.setAttribute('changing', '')
+    requestAnimationFrame(() => {
+        if(requestSequence !== heroPresentationSequence){
+            return
+        }
+        launcherHero.style.backgroundImage = `url(${JSON.stringify(background)})`
+        launcherHeroLogo.src = logo
+        launcherHeroLogo.alt = presentation.title || rawServer?.name || 'MapleCraft'
+        setTimeout(() => {
+            if(requestSequence === heroPresentationSequence){
+                launcherHero.removeAttribute('changing')
+            }
+        }, 200)
+    })
+}
+
 function updateSelectedServer(serv){
     if(getCurrentView() === VIEWS.settings){
         fullSettingsSave()
@@ -330,6 +420,8 @@ function updateSelectedServer(serv){
         animateSettingsTabRefresh()
     }
     setLaunchEnabled(serv != null)
+    void applyServerPresentation(serv)
+    void initNews()
 }
 // Real text is set in uibinder.js on distributionIndexDone.
 selectedServerName.textContent = Lang.queryJS('landing.selectedServer.loading')
@@ -845,7 +937,7 @@ function setLandingSection(section){
     if(showUpdates && newsAlertShown){
         $('#newsButtonAlert').fadeOut(200)
         newsAlertShown = false
-        ConfigManager.setNewsCacheDismissed(true)
+        ConfigManager.setNewsCacheDismissed(activeNewsContext.serverId, activeNewsContext.source, true)
         ConfigManager.save()
     }
 }
@@ -929,6 +1021,9 @@ let newsLoadingListener = null
  */
 function setNewsLoading(val){
     if(val){
+        if(newsLoadingListener != null){
+            clearInterval(newsLoadingListener)
+        }
         const nLStr = Lang.queryJS('landing.news.checking')
         let dotStr = '..'
         nELoadSpan.innerHTML = nLStr + dotStr
@@ -971,7 +1066,7 @@ newsArticleContentScrollable.onscroll = (e) => {
  * content has finished loading and transitioning.
  */
 function reloadNews(){
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
         $('#newsContent').fadeOut(250, () => {
             $('#newsErrorLoading').fadeIn(250)
             initNews().then(() => {
@@ -982,6 +1077,11 @@ function reloadNews(){
 }
 
 let newsAlertShown = false
+let newsRequestSequence = 0
+let activeNewsContext = {
+    serverId: '__global__',
+    source: ''
+}
 
 /**
  * Show the news alert indicating there is new news.
@@ -1001,6 +1101,17 @@ async function digestMessage(str) {
     return hashHex
 }
 
+async function resolveNewsContext(){
+    const distroData = await DistroAPI.getDistribution()
+    const selectedServerId = ConfigManager.getSelectedServer()
+    const server = selectedServerId == null ? null : distroData.getServerById(selectedServerId)
+    const source = server?.rawServer?.ui?.news?.rss || distroData.rawDistribution.rss || ''
+    return {
+        serverId: selectedServerId || '__global__',
+        source
+    }
+}
+
 /**
  * Initialize News UI. This will load the news and prepare
  * the UI accordingly.
@@ -1009,10 +1120,29 @@ async function digestMessage(str) {
  * content has finished loading and transitioning.
  */
 async function initNews(){
-
+    const requestSequence = ++newsRequestSequence
+    const context = await resolveNewsContext()
+    if(requestSequence !== newsRequestSequence){
+        return
+    }
+    activeNewsContext = context
+    newsAlertShown = false
+    $('#newsButtonAlert').stop(true, true).hide()
+    $('#newsContent').stop(true, true).hide()
+    $('#newsErrorFailed, #newsErrorNone').stop(true, true).hide()
+    $('#newsErrorContainer, #newsErrorLoading').stop(true, true).show()
     setNewsLoading(true)
 
-    const news = await loadNews()
+    const cached = ConfigManager.getNewsCache(context.serverId, context.source)
+    let news = await loadNews(context.source)
+    if(requestSequence !== newsRequestSequence){
+        return
+    }
+    let usingCache = false
+    if(news?.articles == null && Array.isArray(cached.articles)){
+        news = { articles: cached.articles }
+        usingCache = true
+    }
 
     newsArr = news?.articles || null
 
@@ -1022,6 +1152,9 @@ async function initNews(){
         renderNewsCards(null)
 
         await $('#newsErrorLoading').fadeOut(250).promise()
+        if(requestSequence !== newsRequestSequence){
+            return
+        }
         await $('#newsErrorFailed').fadeIn(250).promise()
 
     } else if(newsArr.length === 0) {
@@ -1029,14 +1162,18 @@ async function initNews(){
         setNewsLoading(false)
         renderNewsCards([])
 
-        ConfigManager.setNewsCache({
+        ConfigManager.setNewsCache(context.serverId, context.source, {
             date: null,
             content: null,
-            dismissed: false
+            dismissed: false,
+            articles: []
         })
         ConfigManager.save()
 
         await $('#newsErrorLoading').fadeOut(250).promise()
+        if(requestSequence !== newsRequestSequence){
+            return
+        }
         await $('#newsErrorNone').fadeIn(250).promise()
     } else {
         // Success
@@ -1044,12 +1181,18 @@ async function initNews(){
         renderNewsCards(newsArr)
 
         const lN = newsArr[0]
-        const cached = ConfigManager.getNewsCache()
-        let newHash = await digestMessage(lN.content)
-        let newDate = new Date(lN.date)
+        const newHash = await digestMessage(lN.content)
+        if(requestSequence !== newsRequestSequence){
+            return
+        }
+        const newDate = new Date(lN.date)
         let isNew = false
 
-        if(cached.date != null && cached.content != null){
+        if(usingCache){
+            if(!cached.dismissed){
+                showNewsAlert()
+            }
+        } else if(cached.date != null && cached.content != null){
 
             if(new Date(cached.date) >= newDate){
 
@@ -1069,16 +1212,17 @@ async function initNews(){
                 showNewsAlert()
             }
 
-        } else {
+        } else if(!usingCache) {
             isNew = true
             showNewsAlert()
         }
 
-        if(isNew){
-            ConfigManager.setNewsCache({
+        if(!usingCache){
+            ConfigManager.setNewsCache(context.serverId, context.source, {
                 date: newDate.getTime(),
                 content: newHash,
-                dismissed: false
+                dismissed: isNew ? false : cached.dismissed,
+                articles: newsArr
             })
             ConfigManager.save()
         }
@@ -1093,6 +1237,9 @@ async function initNews(){
         document.getElementById('newsNavigateRight').onclick = () => { switchHandler(true) }
         document.getElementById('newsNavigateLeft').onclick = () => { switchHandler(false) }
         await $('#newsErrorContainer').fadeOut(250).promise()
+        if(requestSequence !== newsRequestSequence){
+            return
+        }
         displayArticle(newsArr[0], 1)
         await $('#newsContent').fadeIn(250).promise()
     }
@@ -1152,18 +1299,22 @@ function displayArticle(articleObject, index){
  * Load news information from the RSS feed specified in the
  * distribution index.
  */
-async function loadNews(){
+async function loadNews(newsFeed){
 
-    const distroData = await DistroAPI.getDistribution()
-    if(!distroData.rawDistribution.rss) {
+    if(!newsFeed) {
         loggerLanding.debug('No RSS feed provided.')
         return null
     }
 
-    const promise = new Promise((resolve, reject) => {
-        
-        const newsFeed = distroData.rawDistribution.rss
-        const newsHost = new URL(newsFeed).origin + '/'
+    const promise = new Promise(resolve => {
+        let newsHost
+        try {
+            newsHost = new URL(newsFeed).origin + '/'
+        } catch(err) {
+            loggerLanding.warn('Invalid RSS feed URL.', newsFeed)
+            resolve({ articles: null })
+            return
+        }
         $.ajax({
             url: newsFeed,
             success: (data) => {

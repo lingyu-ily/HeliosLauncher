@@ -139,7 +139,6 @@ async function showMainUI(data){
         }, 250)
         
     }, 750)
-    initNews()
 }
 
 function showFatalStartupError(){
@@ -169,7 +168,6 @@ function onDistroRefresh(data){
     renderServerSidebar(data)
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
     refreshServerStatus()
-    initNews()
     syncModConfigurations(data)
     ensureJavaSettings(data)
 }

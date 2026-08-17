@@ -31,6 +31,18 @@ The distribution index is written in JSON. The general format of the index is as
             },
             "mainServer": true,
             "autoconnect": true,
+            "ui": {
+                "hero": {
+                    "background": "https://example.com/westeros/background.webp",
+                    "logo": "https://example.com/westeros/logo.png",
+                    "eyebrow": "WESTEROSCRAFT SERVER",
+                    "title": "WesterosCraft",
+                    "tagline": "Enter the Realm."
+                },
+                "news": {
+                    "rss": "https://forum.westeroscraft.com/forum/news.2/index.rss"
+                }
+            },
             "modules": [
                 "Module Objects Here"
             ]
@@ -144,6 +156,10 @@ Only one server in the array should have the `mainServer` property enabled. This
 ### `Server.autoconnect: boolean`
 
 Whether or not the server can be autoconnected to. If false, the server will not be autoconnected to even when the user has the autoconnect setting enabled.
+
+### `Server.ui: object`
+
+Optional per-server Launcher presentation. `ui.hero` may define `background`, `logo`, `eyebrow`, `title`, and `tagline`. `ui.news.rss` overrides the distribution-level RSS feed for this server. Missing fields inherit the Launcher's global presentation or the distribution-level RSS feed.
 
 ### `Server.javaOptions: JavaOptions`
 

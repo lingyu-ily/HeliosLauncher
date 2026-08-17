@@ -10,6 +10,7 @@ mediaInstagramURL = "#"
 mediaYouTubeURL = "#"
 mediaDiscordURL = "https://discord.gg/NX5xebH"
 heroTagline = "下一場冒險，從這裡開始"
+heroEyebrow = "MAPLECRAFT 伺服器"
 
 [ejs.settings]
 tabsAriaLabel = "設定分類"

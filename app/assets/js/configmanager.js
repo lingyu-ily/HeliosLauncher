@@ -90,9 +90,8 @@ const DEFAULT_CONFIG = {
         }
     },
     newsCache: {
-        date: null,
-        content: null,
-        dismissed: false
+        version: 2,
+        entries: {}
     },
     clientToken: null,
     selectedServer: null, // Resolved
@@ -213,8 +212,31 @@ exports.getTempNativeFolder = function(){
  * 
  * @returns {Object} The news cache object.
  */
-exports.getNewsCache = function(){
+function getNewsCacheKey(serverId, source){
+    return `${serverId || '__global__'}\n${source || ''}`
+}
+
+function ensureNewsCache(){
+    if(config.newsCache?.version !== 2 || config.newsCache.entries == null || typeof config.newsCache.entries !== 'object'){
+        config.newsCache = {
+            version: 2,
+            entries: {}
+        }
+    }
     return config.newsCache
+}
+
+exports.getNewsCache = function(serverId, source){
+    const entry = ensureNewsCache().entries[getNewsCacheKey(serverId, source)]
+    return entry == null
+        ? {
+            source: source || '',
+            date: null,
+            content: null,
+            dismissed: false,
+            articles: null
+        }
+        : entry
 }
 
 /**
@@ -222,8 +244,14 @@ exports.getNewsCache = function(){
  * 
  * @param {Object} newsCache The new news cache object.
  */
-exports.setNewsCache = function(newsCache){
-    config.newsCache = newsCache
+exports.setNewsCache = function(serverId, source, newsCache){
+    ensureNewsCache().entries[getNewsCacheKey(serverId, source)] = {
+        source: source || '',
+        date: newsCache.date ?? null,
+        content: newsCache.content ?? null,
+        dismissed: Boolean(newsCache.dismissed),
+        articles: Array.isArray(newsCache.articles) ? newsCache.articles : null
+    }
 }
 
 /**
@@ -231,8 +259,10 @@ exports.setNewsCache = function(newsCache){
  * 
  * @param {boolean} dismissed Whether or not the news has been dismissed (checked).
  */
-exports.setNewsCacheDismissed = function(dismissed){
-    config.newsCache.dismissed = dismissed
+exports.setNewsCacheDismissed = function(serverId, source, dismissed){
+    const cache = exports.getNewsCache(serverId, source)
+    cache.dismissed = dismissed
+    exports.setNewsCache(serverId, source, cache)
 }
 
 /**

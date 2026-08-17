@@ -1,29 +1,22 @@
 <div id="settingsContainer" style="display: none;">
-    <div id="settingsContainerLeft">
-        <div id="settingsNavContainer">
-            <div id="settingsNavHeader">
-                <span id="settingsNavHeaderText"><%- lang('settings.navHeaderText') %></span>
-            </div>
-            <div id="settingsNavItemsContainer">
-                <div id="settingsNavItemsContent">
-                    <button class="settingsNavItem" rSc="settingsTabAccount" id="settingsNavAccount" selected><%- lang('settings.navAccount') %></button>
-                    <button class="settingsNavItem" rSc="settingsTabMinecraft"><%- lang('settings.navMinecraft') %></button>
-                    <button class="settingsNavItem" rSc="settingsTabMods"><%- lang('settings.navMods') %></button>
-                    <button class="settingsNavItem" rSc="settingsTabJava"><%- lang('settings.navJava') %></button>
-                    <button class="settingsNavItem" rSc="settingsTabLauncher"><%- lang('settings.navLauncher') %></button>
-                    <div class="settingsNavSpacer"></div>
-                    <button class="settingsNavItem" rSc="settingsTabAbout"><%- lang('settings.navAbout') %></button>
-                    <button class="settingsNavItem" rSc="settingsTabUpdate" id="settingsNavUpdate"><%- lang('settings.navUpdates') %></button>
-                    <div id="settingsNavContentBottom">
-                        <div class="settingsNavDivider"></div>
-                        <button id="settingsNavDone"><%- lang('settings.navDone') %></button>
-                    </div>
-                </div>
+    <header id="settingsNavContainer">
+        <div id="settingsNavHeader">
+            <span id="settingsNavHeaderText"><%- lang('settings.navHeaderText') %></span>
+        </div>
+        <div id="settingsNavItemsContainer">
+            <div id="settingsNavItemsContent" role="tablist" aria-label="<%- lang('settings.tabsAriaLabel') %>">
+                <button class="settingsNavItem" rSc="settingsTabAccount" id="settingsNavAccount" role="tab" aria-controls="settingsTabAccount" aria-selected="true" tabindex="0" selected><%- lang('settings.navAccount') %></button>
+                <button class="settingsNavItem" rSc="settingsTabMinecraft" id="settingsNavMinecraft" role="tab" aria-controls="settingsTabMinecraft" aria-selected="false" tabindex="-1"><%- lang('settings.navMinecraft') %></button>
+                <button class="settingsNavItem" rSc="settingsTabMods" id="settingsNavMods" role="tab" aria-controls="settingsTabMods" aria-selected="false" tabindex="-1"><%- lang('settings.navMods') %></button>
+                <button class="settingsNavItem" rSc="settingsTabJava" id="settingsNavJava" role="tab" aria-controls="settingsTabJava" aria-selected="false" tabindex="-1"><%- lang('settings.navJava') %></button>
+                <button class="settingsNavItem" rSc="settingsTabLauncher" id="settingsNavLauncher" role="tab" aria-controls="settingsTabLauncher" aria-selected="false" tabindex="-1"><%- lang('settings.navLauncher') %></button>
+                <button class="settingsNavItem" rSc="settingsTabAbout" id="settingsNavAbout" role="tab" aria-controls="settingsTabAbout" aria-selected="false" tabindex="-1"><%- lang('settings.navAbout') %></button>
+                <button class="settingsNavItem" rSc="settingsTabUpdate" id="settingsNavUpdate" role="tab" aria-controls="settingsTabUpdate" aria-selected="false" tabindex="-1"><%- lang('settings.navUpdates') %></button>
             </div>
         </div>
-    </div>
+    </header>
     <div id="settingsContainerRight">
-        <div id="settingsTabAccount" class="settingsTab">
+        <div id="settingsTabAccount" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavAccount" tabindex="0">
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.tabAccountHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.tabAccountHeaderDesc') %></span>
@@ -69,7 +62,7 @@
                 </div>
             </div>
         </div>
-        <div id="settingsTabMinecraft" class="settingsTab" style="display: none;">
+        <div id="settingsTabMinecraft" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavMinecraft" tabindex="0" style="display: none;">
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.minecraftTabHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.minecraftTabHeaderDesc') %></span>
@@ -117,7 +110,7 @@
                 </div>
             </div>
         </div>
-        <div id="settingsTabMods" class="settingsTab" style="display: none;">
+        <div id="settingsTabMods" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavMods" tabindex="0" style="display: none;">
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.tabModsHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.tabModsHeaderDesc') %></span>
@@ -167,7 +160,7 @@
                 </div>
             </div>
         </div>
-        <div id="settingsTabJava" class="settingsTab" style="display: none;">
+        <div id="settingsTabJava" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavJava" tabindex="0" style="display: none;">
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.tabJavaHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.tabJavaHeaderDesc') %></span>
@@ -269,7 +262,7 @@
                 <div id="settingsJVMOptsDesc"><%- lang('settings.jvmOptsDesc') %><br><a href="#" id="settingsJvmOptsLink"><!-- Available Options --></a></div>
             </div>
         </div>
-        <div id="settingsTabLauncher" class="settingsTab" style="display: none;">
+        <div id="settingsTabLauncher" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavLauncher" tabindex="0" style="display: none;">
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.launcherTabHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.launcherTabHeaderDesc') %></span>
@@ -306,7 +299,7 @@
                 <div class="settingsFileSelDesc"><%- lang('settings.dataDirectoryDesc') %></div>
             </div>
         </div>
-        <div id="settingsTabAbout" class="settingsTab" style="display: none;">
+        <div id="settingsTabAbout" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavAbout" tabindex="0" style="display: none;">
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.aboutTabHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.aboutTabHeaderDesc') %></span>
@@ -351,7 +344,7 @@
                 </div>
             </div>
         </div>
-        <div id="settingsTabUpdate" class="settingsTab" style="display: none;">
+        <div id="settingsTabUpdate" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavUpdate" tabindex="0" style="display: none;">
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.launcherUpdatesHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.launcherUpdatesHeaderDesc') %></span>

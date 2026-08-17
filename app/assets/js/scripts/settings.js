@@ -4,6 +4,7 @@ const semver = require('semver')
 
 const DropinModUtil  = require('./assets/js/dropinmodutil')
 const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = require('./assets/js/ipcconstants')
+const settingsLogger = LoggerUtil.getLogger('Settings')
 
 const settingsState = {
     invalid: new Set()
@@ -241,7 +242,7 @@ let selectedSettingsTab = 'settingsTabAccount'
  * @param {UIEvent} e The scroll event.
  */
 function settingsTabScrollListener(e){
-    if(e.target.scrollTop > Number.parseFloat(getComputedStyle(e.target.firstElementChild).marginTop)){
+    if(e.target.scrollTop > 0){
         document.getElementById('settingsContainer').setAttribute('scrolled', '')
     } else {
         document.getElementById('settingsContainer').removeAttribute('scrolled')
@@ -252,13 +253,47 @@ function settingsTabScrollListener(e){
  * Bind functionality for the settings navigation items.
  */
 function setupSettingsTabs(){
-    Array.from(document.getElementsByClassName('settingsNavItem')).map((val) => {
+    const navItems = Array.from(document.getElementsByClassName('settingsNavItem'))
+    const tabList = document.getElementById('settingsNavItemsContent')
+
+    navItems.forEach((val) => {
         if(val.hasAttribute('rSc')){
             val.onclick = () => {
                 settingsNavItemListener(val)
             }
         }
     })
+
+    tabList.addEventListener('keydown', (e) => {
+        if(!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)){
+            return
+        }
+
+        e.preventDefault()
+        const currentIndex = Math.max(0, navItems.indexOf(document.activeElement))
+        let nextIndex
+        if(e.key === 'Home'){
+            nextIndex = 0
+        } else if(e.key === 'End'){
+            nextIndex = navItems.length - 1
+        } else {
+            const offset = e.key === 'ArrowRight' ? 1 : -1
+            nextIndex = (currentIndex + offset + navItems.length) % navItems.length
+        }
+
+        navItems[nextIndex].focus()
+        settingsNavItemListener(navItems[nextIndex])
+    })
+
+    tabList.addEventListener('wheel', (e) => {
+        if(tabList.scrollWidth <= tabList.clientWidth){
+            return
+        }
+        e.preventDefault()
+        tabList.scrollLeft += e.deltaX || e.deltaY
+    }, { passive: false })
+
+    document.getElementById(selectedSettingsTab).onscroll = settingsTabScrollListener
 }
 
 /**
@@ -270,25 +305,32 @@ function setupSettingsTabs(){
  */
 function settingsNavItemListener(ele, fade = true){
     if(ele.hasAttribute('selected')){
+        ele.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         return
     }
     const navItems = document.getElementsByClassName('settingsNavItem')
     for(let i=0; i<navItems.length; i++){
-        if(navItems[i].hasAttribute('selected')){
-            navItems[i].removeAttribute('selected')
-        }
+        navItems[i].removeAttribute('selected')
+        navItems[i].setAttribute('aria-selected', 'false')
+        navItems[i].tabIndex = -1
     }
     ele.setAttribute('selected', '')
+    ele.setAttribute('aria-selected', 'true')
+    ele.tabIndex = 0
+    ele.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     let prevTab = selectedSettingsTab
     selectedSettingsTab = ele.getAttribute('rSc')
 
     document.getElementById(prevTab).onscroll = null
     document.getElementById(selectedSettingsTab).onscroll = settingsTabScrollListener
 
-    if(fade){
-        $(`#${prevTab}`).fadeOut(250, () => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const duration = fade && !reduceMotion ? 200 : 0
+
+    if(duration > 0){
+        $(`#${prevTab}`).fadeOut(duration, () => {
             $(`#${selectedSettingsTab}`).fadeIn({
-                duration: 250,
+                duration,
                 start: () => {
                     settingsTabScrollListener({
                         target: document.getElementById(selectedSettingsTab)
@@ -310,15 +352,13 @@ function settingsNavItemListener(ele, fade = true){
     }
 }
 
-const settingsNavDone = document.getElementById('settingsNavDone')
-
 /**
- * Set if the settings save (done) button is disabled.
+ * Mark whether invalid values currently block leaving Settings.
  * 
  * @param {boolean} v True to disable, false to enable.
  */
 function settingsSaveDisabled(v){
-    settingsNavDone.disabled = v
+    document.getElementById('settingsContainer').toggleAttribute('save-disabled', v)
 }
 
 function fullSettingsSave() {
@@ -329,11 +369,62 @@ function fullSettingsSave() {
     saveShaderpackSettings()
 }
 
-/* Closes the settings view and saves all data. */
-settingsNavDone.onclick = () => {
-    fullSettingsSave()
-    switchView(getCurrentView(), VIEWS.landing)
+function showSettingsSaveError(title, message, focusTarget = null){
+    setOverlayContent(title, message, Lang.queryJS('settings.save.okButton'))
+    setOverlayHandler(() => {
+        toggleOverlay(false)
+        focusTarget?.focus()
+    })
+    toggleOverlay(true)
 }
+
+/**
+ * Save settings before navigating away from this view.
+ *
+ * @param {boolean} showError Whether an overlay should explain a blocked save.
+ * @returns {boolean} True when navigation may continue.
+ */
+function saveSettingsBeforeExit(showError = true){
+    if(settingsState.invalid.size > 0){
+        const invalidElement = document.querySelector('#settingsContainer [error]')
+        const invalidTab = invalidElement?.closest('.settingsTab')
+        const invalidNav = invalidTab == null
+            ? null
+            : document.querySelector(`.settingsNavItem[rSc="${invalidTab.id}"]`)
+        if(invalidNav != null){
+            settingsNavItemListener(invalidNav, false)
+        }
+        if(showError){
+            showSettingsSaveError(
+                Lang.queryJS('settings.save.invalidTitle'),
+                Lang.queryJS('settings.save.invalidMessage'),
+                invalidElement
+            )
+        }
+        return false
+    }
+
+    try {
+        fullSettingsSave()
+        return true
+    } catch(err) {
+        settingsLogger.error('Failed to save settings before leaving the view.', err)
+        if(showError){
+            showSettingsSaveError(
+                Lang.queryJS('settings.save.failedTitle'),
+                Lang.queryJS('settings.save.failedMessage')
+            )
+        }
+        return false
+    }
+}
+
+window.addEventListener('beforeunload', (e) => {
+    if(getCurrentView() === VIEWS.settings && !saveSettingsBeforeExit(false)){
+        e.preventDefault()
+        e.returnValue = false
+    }
+})
 
 /**
  * Account Management Tab
@@ -1100,9 +1191,12 @@ async function loadSelectedServerOnModsTab(){
 
 // Bind functionality to the server switch button.
 Array.from(document.getElementsByClassName('settingsSwitchServerButton')).forEach(el => {
-    el.addEventListener('click', async e => {
+    el.addEventListener('click', e => {
         e.target.blur()
-        await toggleServerSelection(true)
+        switchView(getCurrentView(), VIEWS.landing, 200, 200, () => {}, () => {
+            setLandingSection('play')
+            focusSelectedServerSidebar()
+        })
     })
 })
 

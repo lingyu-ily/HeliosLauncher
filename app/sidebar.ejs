@@ -1,0 +1,48 @@
+<aside id="launcherSidebar">
+    <div id="user_content">
+        <button id="avatarOverlay" type="button" aria-label="<%- lang('landing.usernameEditButton') %>">
+            <span id="avatarContainer" aria-hidden="true"></span>
+            <span class="sidebarAccountCopy">
+                <span id="user_text"><%- lang('landing.usernamePlaceholder') %></span>
+                <span id="accountTypeText"><%- lang('landing.accountType') %></span>
+            </span>
+            <span class="sidebarChevron" aria-hidden="true">⌄</span>
+        </button>
+    </div>
+
+    <button id="landingHomeButton" class="sidebarNavButton" type="button" selected>
+        <span class="sidebarNavIcon sidebarHomeIcon" aria-hidden="true"></span>
+        <span><%- lang('landing.navHome') %></span>
+    </button>
+
+    <div id="serverSidebarHeading"><%- lang('landing.navServers') %></div>
+    <div id="serverSidebarList" role="listbox" tabindex="0" aria-live="polite">
+        <div id="serverSidebarLoading" class="serverSidebarState">
+            <span class="sidebarStateSpinner" aria-hidden="true"></span>
+            <span><%- lang('landing.serverListLoading') %></span>
+        </div>
+    </div>
+
+    <div id="sidebarFooter">
+        <button id="newsButton" class="sidebarNavButton" type="button">
+            <span class="sidebarNavIcon sidebarNewsIcon" aria-hidden="true"></span>
+            <span id="newsButtonText"><%- lang('landing.navWhatsNew') %></span>
+            <span id="newsButtonAlert" style="display: none;"></span>
+            <svg id="newsButtonSVG" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </button>
+        <div id="sidebarSettingsRow">
+            <button id="settingsMediaButton" class="sidebarNavButton" type="button">
+                <span class="sidebarNavIcon sidebarSettingsIcon" aria-hidden="true"></span>
+                <span><%- lang('landing.settingsTooltip') %></span>
+            </button>
+            <button id="sidebarUpdateButton" type="button" hidden title="<%- lang('landing.updateAvailableTooltip') %>" aria-label="<%- lang('landing.updateAvailableTooltip') %>">
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 2v7M5 7l3 3 3-3M3 13h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+        <span id="launcherVersionText"></span>
+    </div>
+</aside>

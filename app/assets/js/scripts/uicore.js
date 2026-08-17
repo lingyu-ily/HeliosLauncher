@@ -46,12 +46,12 @@ if(!isDev){
                 break
             case 'update-available':
                 loggerAutoUpdater.info('New update available', info.version)
-                
+
                 if(process.platform === 'darwin'){
                     info.darwindownload = `https://github.com/lingyu-ily/MapleCraftLauncher/releases/download/v${info.version}/MapleCraft-Launcher-setup-${info.version}${process.arch === 'arm64' ? '-arm64' : '-x64'}.dmg`
-                    showUpdateUI(info)
                 }
-                
+
+                showUpdateUI(info)
                 populateSettingsUpdateInformation(info)
                 break
             case 'update-downloaded':
@@ -65,6 +65,7 @@ if(!isDev){
                 break
             case 'update-not-available':
                 loggerAutoUpdater.info('No new update found.')
+                hideUpdateUI()
                 settingsUpdateButtonStatus(Lang.queryJS('uicore.autoUpdate.checkForUpdatesButton'))
                 break
             case 'ready':
@@ -105,26 +106,31 @@ function changeAllowPrerelease(val){
 }
 
 function showUpdateUI(info){
-    //TODO Make this message a bit more informative `${info.version}`
-    const updateElement = document.getElementById(process.platform === 'darwin' ? 'image_seal_container' : 'frameButton_update')
-    updateElement.setAttribute('update', true)
-    updateElement.onclick = () => {
-        /*setOverlayContent('Update Available', 'A new update for the launcher is available. Would you like to install now?', 'Install', 'Later')
-        setOverlayHandler(() => {
-            if(!isDev){
-                ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
-            } else {
-                console.error('Cannot install updates in development environment.')
-                toggleOverlay(false)
-            }
-        })
-        setDismissHandler(() => {
-            toggleOverlay(false)
-        })
-        toggleOverlay(true, true)*/
-        switchView(getCurrentView(), VIEWS.settings, 500, 500, () => {
+    const updateElement = document.getElementById('sidebarUpdateButton')
+    if(updateElement == null){
+        return
+    }
+
+    updateElement.hidden = false
+    updateElement.dataset.version = info.version
+    updateElement.onclick = async () => {
+        if(getCurrentView() === VIEWS.settings){
+            settingsNavItemListener(document.getElementById('settingsNavUpdate'))
+            return
+        }
+        await prepareSettings()
+        switchView(getCurrentView(), VIEWS.settings, 200, 200, () => {
             settingsNavItemListener(document.getElementById('settingsNavUpdate'), false)
         })
+    }
+}
+
+function hideUpdateUI(){
+    const updateElement = document.getElementById('sidebarUpdateButton')
+    if(updateElement != null){
+        updateElement.hidden = true
+        delete updateElement.dataset.version
+        updateElement.onclick = null
     }
 }
 
@@ -137,36 +143,6 @@ document.addEventListener('readystatechange', function () {
     if (document.readyState === 'interactive'){
         loggerUICore.info('UICore Initializing..')
 
-        // Bind close button.
-        Array.from(document.getElementsByClassName('fCb')).map((val) => {
-            val.addEventListener('click', e => {
-                const window = remote.getCurrentWindow()
-                window.close()
-            })
-        })
-
-        // Bind restore down button.
-        Array.from(document.getElementsByClassName('fRb')).map((val) => {
-            val.addEventListener('click', e => {
-                const window = remote.getCurrentWindow()
-                if(window.isMaximized()){
-                    window.unmaximize()
-                } else {
-                    window.maximize()
-                }
-                document.activeElement.blur()
-            })
-        })
-
-        // Bind minimize button.
-        Array.from(document.getElementsByClassName('fMb')).map((val) => {
-            val.addEventListener('click', e => {
-                const window = remote.getCurrentWindow()
-                window.minimize()
-                document.activeElement.blur()
-            })
-        })
-
         // Remove focus from social media buttons once they're clicked.
         Array.from(document.getElementsByClassName('mediaURL')).map(val => {
             val.addEventListener('click', e => {
@@ -174,21 +150,6 @@ document.addEventListener('readystatechange', function () {
             })
         })
 
-    } else if(document.readyState === 'complete'){
-
-        //266.01
-        //170.8
-        //53.21
-        // Bind progress bar length to length of bot wrapper
-        //const targetWidth = document.getElementById("launch_content").getBoundingClientRect().width
-        //const targetWidth2 = document.getElementById("server_selection").getBoundingClientRect().width
-        //const targetWidth3 = document.getElementById("launch_button").getBoundingClientRect().width
-
-        document.getElementById('launch_details').style.maxWidth = 266.01
-        document.getElementById('launch_progress').style.width = 170.8
-        document.getElementById('launch_details_right').style.maxWidth = 170.8
-        document.getElementById('launch_progress_label').style.width = 53.21
-        
     }
 
 }, false)

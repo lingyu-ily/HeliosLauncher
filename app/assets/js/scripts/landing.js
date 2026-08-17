@@ -32,17 +32,38 @@ const DiscordWrapper          = require('./assets/js/discordwrapper')
 const ProcessBuilder          = require('./assets/js/processbuilder')
 
 // Launch Elements
-const launch_content          = document.getElementById('launch_content')
+const launch_button           = document.getElementById('launch_button')
 const launch_details          = document.getElementById('launch_details')
 const launch_progress         = document.getElementById('launch_progress')
 const launch_progress_label   = document.getElementById('launch_progress_label')
 const launch_details_text     = document.getElementById('launch_details_text')
 const server_selection_button = document.getElementById('server_selection_button')
 const user_text               = document.getElementById('user_text')
+const launchAccountName       = document.getElementById('launchAccountName')
+const accountTypeText         = document.getElementById('accountTypeText')
+const serverSidebarList       = document.getElementById('serverSidebarList')
+const selectedServerIcon      = document.getElementById('selectedServerIcon')
+const selectedServerName      = document.getElementById('selectedServerName')
+const selectedServerVersion   = document.getElementById('selectedServerVersion')
 
 const loggerLanding = LoggerUtil.getLogger('Landing')
+const launchButtonDefaultText = launch_button.textContent
+let launchInProgress = false
+let launchServerAvailable = false
 
 /* Launch Progress Wrapper Functions */
+
+function refreshLaunchButtonState(){
+    launch_button.disabled = launchInProgress || !launchServerAvailable
+    launch_button.toggleAttribute('launching', launchInProgress)
+    if(launchInProgress){
+        launch_button.textContent = launch_details_text.textContent
+        launch_button.title = launch_details_text.textContent
+    } else {
+        launch_button.textContent = launchButtonDefaultText
+        launch_button.removeAttribute('title')
+    }
+}
 
 /**
  * Show/hide the loading area.
@@ -50,13 +71,11 @@ const loggerLanding = LoggerUtil.getLogger('Landing')
  * @param {boolean} loading True if the loading area should be shown, otherwise false.
  */
 function toggleLaunchArea(loading){
-    if(loading){
-        launch_details.style.display = 'flex'
-        launch_content.style.display = 'none'
-    } else {
-        launch_details.style.display = 'none'
-        launch_content.style.display = 'inline-flex'
-    }
+    launchInProgress = loading
+    launch_details.toggleAttribute('active', loading)
+    launch_details.setAttribute('aria-hidden', String(!loading))
+    launch_details.setAttribute('aria-busy', String(loading))
+    refreshLaunchButtonState()
 }
 
 /**
@@ -65,7 +84,11 @@ function toggleLaunchArea(loading){
  * @param {string} details The new text for the loading details.
  */
 function setLaunchDetails(details){
-    launch_details_text.innerHTML = details
+    launch_details_text.textContent = details
+    if(launchInProgress){
+        launch_button.textContent = details
+        launch_button.title = details
+    }
 }
 
 /**
@@ -74,9 +97,10 @@ function setLaunchDetails(details){
  * @param {number} percent Percentage (0-100)
  */
 function setLaunchPercentage(percent){
-    launch_progress.setAttribute('max', 100)
-    launch_progress.setAttribute('value', percent)
-    launch_progress_label.innerHTML = percent + '%'
+    const normalizedPercent = Math.min(100, Math.max(0, Number(percent) || 0))
+    launch_progress.max = 100
+    launch_progress.value = normalizedPercent
+    launch_progress_label.textContent = normalizedPercent + '%'
 }
 
 /**
@@ -95,11 +119,12 @@ function setDownloadPercentage(percent){
  * @param {boolean} val True to enable, false to disable.
  */
 function setLaunchEnabled(val){
-    document.getElementById('launch_button').disabled = !val
+    launchServerAvailable = val
+    refreshLaunchButtonState()
 }
 
 // Bind launch button
-document.getElementById('launch_button').addEventListener('click', async e => {
+launch_button.addEventListener('click', async e => {
     loggerLanding.info('Launching game..')
     try {
         const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
@@ -129,12 +154,27 @@ document.getElementById('launch_button').addEventListener('click', async e => {
 
 // Bind settings button
 document.getElementById('settingsMediaButton').onclick = async e => {
+    if(getCurrentView() === VIEWS.settings){
+        document.querySelector('.settingsNavItem[selected]')?.focus()
+        return
+    }
     await prepareSettings()
     switchView(getCurrentView(), VIEWS.settings)
 }
 
+document.getElementById('landingModsButton').onclick = async () => {
+    await prepareSettings()
+    switchView(getCurrentView(), VIEWS.settings, 200, 200, () => {
+        settingsNavItemListener(document.getElementById('settingsNavMods'), false)
+    })
+}
+
 // Bind avatar overlay button.
 document.getElementById('avatarOverlay').onclick = async e => {
+    if(getCurrentView() === VIEWS.settings){
+        settingsNavItemListener(document.getElementById('settingsNavAccount'))
+        return
+    }
     await prepareSettings()
     switchView(getCurrentView(), VIEWS.settings, 500, 500, () => {
         settingsNavItemListener(document.getElementById('settingsNavAccount'), false)
@@ -144,17 +184,127 @@ document.getElementById('avatarOverlay').onclick = async e => {
 // Bind selected account
 function updateSelectedAccount(authUser){
     let username = Lang.queryJS('landing.selectedAccount.noAccountSelected')
+    let accountType = Lang.queryJS('landing.selectedAccount.noAccountType')
     if(authUser != null){
         if(authUser.displayName != null){
             username = authUser.displayName
         }
+        accountType = authUser.type === 'microsoft'
+            ? Lang.queryJS('landing.selectedAccount.microsoft')
+            : Lang.queryJS('landing.selectedAccount.mojang')
         if(authUser.uuid != null){
-            document.getElementById('avatarContainer').style.backgroundImage = `url('https://mc-heads.net/body/${authUser.uuid}/right')`
+            document.getElementById('avatarContainer').style.backgroundImage = `url('https://mc-heads.net/head/${authUser.uuid}/64')`
         }
     }
     user_text.innerHTML = username
+    launchAccountName.innerHTML = username
+    accountTypeText.innerHTML = accountType
 }
 updateSelectedAccount(ConfigManager.getSelectedAccount())
+
+document.getElementById('launcherVersionText').textContent = `v${remote.app.getVersion()}`
+
+function setServerSidebarState(message, state = 'loading'){
+    serverSidebarList.innerHTML = ''
+    const status = document.createElement('div')
+    status.className = `serverSidebarState ${state}`
+    if(state === 'loading'){
+        const spinner = document.createElement('span')
+        spinner.className = 'sidebarStateSpinner'
+        spinner.setAttribute('aria-hidden', 'true')
+        status.appendChild(spinner)
+    }
+    const label = document.createElement('span')
+    label.textContent = message
+    status.appendChild(label)
+    serverSidebarList.appendChild(status)
+}
+
+function updateServerSidebarSelection(serverId){
+    for(const item of serverSidebarList.getElementsByClassName('serverSidebarItem')){
+        const selected = item.getAttribute('servid') === serverId
+        item.toggleAttribute('selected', selected)
+        item.setAttribute('aria-selected', selected.toString())
+    }
+}
+
+function renderServerSidebar(distro){
+    if(distro == null || !Array.isArray(distro.servers)){
+        setServerSidebarState(Lang.queryJS('landing.serverList.failed'), 'error')
+        return
+    }
+    if(distro.servers.length === 0){
+        setServerSidebarState(Lang.queryJS('landing.serverList.empty'), 'empty')
+        return
+    }
+
+    const selectedId = ConfigManager.getSelectedServer()
+    const fragment = document.createDocumentFragment()
+    for(const serv of distro.servers){
+        const server = serv.rawServer
+        const item = document.createElement('button')
+        const selected = server.id === selectedId
+        item.type = 'button'
+        item.className = 'serverSidebarItem'
+        item.setAttribute('role', 'option')
+        item.setAttribute('servid', server.id)
+        item.setAttribute('aria-selected', selected.toString())
+        item.toggleAttribute('selected', selected)
+
+        const icon = document.createElement('img')
+        icon.className = 'serverSidebarIcon'
+        icon.src = server.icon
+        icon.alt = ''
+
+        const copy = document.createElement('span')
+        copy.className = 'serverSidebarCopy'
+        const name = document.createElement('span')
+        name.className = 'serverSidebarName'
+        name.textContent = server.name
+        const version = document.createElement('span')
+        version.className = 'serverSidebarVersion'
+        version.textContent = server.minecraftVersion
+        copy.append(name, version)
+        item.append(icon, copy)
+        item.onclick = async () => {
+            if(getCurrentView() === VIEWS.settings){
+                switchView(getCurrentView(), VIEWS.landing, 200, 200, () => {}, async () => {
+                    setLandingSection('play')
+                    if(ConfigManager.getSelectedServer() !== server.id){
+                        updateSelectedServer(serv)
+                        await refreshServerStatus(true)
+                    }
+                })
+                return
+            }
+            if(ConfigManager.getSelectedServer() === server.id){
+                item.focus()
+                return
+            }
+            updateSelectedServer(serv)
+            await refreshServerStatus(true)
+        }
+        fragment.appendChild(item)
+    }
+    serverSidebarList.replaceChildren(fragment)
+}
+
+serverSidebarList.addEventListener('keydown', (e) => {
+    if(e.key !== 'ArrowUp' && e.key !== 'ArrowDown'){
+        return
+    }
+    const items = Array.from(serverSidebarList.getElementsByClassName('serverSidebarItem'))
+    if(items.length === 0){
+        return
+    }
+    e.preventDefault()
+    const currentIndex = items.indexOf(document.activeElement)
+    const offset = e.key === 'ArrowDown' ? 1 : -1
+    const nextIndex = currentIndex < 0
+        ? 0
+        : Math.min(items.length - 1, Math.max(0, currentIndex + offset))
+    items[nextIndex].focus()
+})
 
 // Bind selected server
 function updateSelectedServer(serv){
@@ -163,18 +313,36 @@ function updateSelectedServer(serv){
     }
     ConfigManager.setSelectedServer(serv != null ? serv.rawServer.id : null)
     ConfigManager.save()
-    server_selection_button.innerHTML = '&#8226; ' + (serv != null ? serv.rawServer.name : Lang.queryJS('landing.selectedServer.noSelection'))
+    if(serv != null){
+        selectedServerName.textContent = serv.rawServer.name
+        selectedServerVersion.textContent = `${serv.rawServer.minecraftVersion} · ${serv.rawServer.version}`
+        selectedServerIcon.src = serv.rawServer.icon
+        selectedServerIcon.alt = serv.rawServer.name
+        updateServerSidebarSelection(serv.rawServer.id)
+    } else {
+        selectedServerName.textContent = Lang.queryJS('landing.selectedServer.noSelection')
+        selectedServerVersion.textContent = ''
+        selectedServerIcon.src = 'assets/images/SealCircle.png'
+        selectedServerIcon.alt = ''
+        updateServerSidebarSelection('')
+    }
     if(getCurrentView() === VIEWS.settings){
         animateSettingsTabRefresh()
     }
     setLaunchEnabled(serv != null)
 }
 // Real text is set in uibinder.js on distributionIndexDone.
-server_selection_button.innerHTML = '&#8226; ' + Lang.queryJS('landing.selectedServer.loading')
-server_selection_button.onclick = async e => {
-    e.target.blur()
-    await toggleServerSelection(true)
+selectedServerName.textContent = Lang.queryJS('landing.selectedServer.loading')
+function focusSelectedServerSidebar(){
+    const selectedItem = serverSidebarList.querySelector('.serverSidebarItem[selected]')
+    if(selectedItem != null){
+        selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+        selectedItem.focus()
+    } else {
+        serverSidebarList.focus()
+    }
 }
+server_selection_button.onclick = focusSelectedServerSidebar
 
 // Update Mojang Status Color
 const refreshMojangStatuses = async function(){
@@ -241,6 +409,12 @@ const refreshServerStatus = async (fade = false) => {
 
     let pLabel = Lang.queryJS('landing.serverStatus.server')
     let pVal = Lang.queryJS('landing.serverStatus.offline')
+
+    if(serv == null){
+        document.getElementById('landingPlayerLabel').innerHTML = pLabel
+        document.getElementById('player_count').innerHTML = pVal
+        return
+    }
 
     try {
 
@@ -650,81 +824,100 @@ const newsNavigationStatus          = document.getElementById('newsNavigationSta
 const newsArticleContentScrollable  = document.getElementById('newsArticleContentScrollable')
 const nELoadSpan                    = document.getElementById('nELoadSpan')
 
-// News slide caches.
 let newsActive = false
-let newsGlideCount = 0
 
-/**
- * Show the news UI via a slide animation.
- * 
- * @param {boolean} up True to slide up, otherwise false. 
- */
-function slide_(up){
-    const lCUpper = document.querySelector('#landingContainer > #upper')
-    const lCLLeft = document.querySelector('#landingContainer > #lower > #left')
-    const lCLCenter = document.querySelector('#landingContainer > #lower > #center')
-    const lCLRight = document.querySelector('#landingContainer > #lower > #right')
-    const newsBtn = document.querySelector('#landingContainer > #lower > #center #content')
-    const landingContainer = document.getElementById('landingContainer')
-    const newsContainer = document.querySelector('#landingContainer > #newsContainer')
+function setLandingSection(section){
+    const showUpdates = section === 'updates'
+    const playView = document.getElementById('landingPlayView')
+    const newsView = document.getElementById('newsContainer')
+    const workspaceScroll = document.getElementById('landingWorkspaceScroll')
 
-    newsGlideCount++
+    playView.hidden = showUpdates
+    newsView.hidden = !showUpdates
+    newsView.setAttribute('aria-hidden', (!showUpdates).toString())
+    document.getElementById('landingPlayButton').toggleAttribute('selected', !showUpdates)
+    document.getElementById('landingUpdatesButton').toggleAttribute('selected', showUpdates)
+    document.getElementById('landingHomeButton').toggleAttribute('selected', !showUpdates)
+    document.getElementById('newsButton').toggleAttribute('selected', showUpdates)
+    newsActive = showUpdates
+    workspaceScroll.scrollTo({ top: 0, behavior: 'smooth' })
 
-    if(up){
-        lCUpper.style.top = '-200vh'
-        lCLLeft.style.top = '-200vh'
-        lCLCenter.style.top = '-200vh'
-        lCLRight.style.top = '-200vh'
-        newsBtn.style.top = '130vh'
-        newsContainer.style.top = '0px'
-        //date.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric'})
-        //landingContainer.style.background = 'rgba(29, 29, 29, 0.55)'
-        landingContainer.style.background = 'rgba(0, 0, 0, 0.50)'
-        setTimeout(() => {
-            if(newsGlideCount === 1){
-                lCLCenter.style.transition = 'none'
-                newsBtn.style.transition = 'none'
-            }
-            newsGlideCount--
-        }, 2000)
-    } else {
-        setTimeout(() => {
-            newsGlideCount--
-        }, 2000)
-        landingContainer.style.background = null
-        lCLCenter.style.transition = null
-        newsBtn.style.transition = null
-        newsContainer.style.top = '100%'
-        lCUpper.style.top = '0px'
-        lCLLeft.style.top = '0px'
-        lCLCenter.style.top = '0px'
-        lCLRight.style.top = '0px'
-        newsBtn.style.top = '10px'
+    if(showUpdates && newsAlertShown){
+        $('#newsButtonAlert').fadeOut(200)
+        newsAlertShown = false
+        ConfigManager.setNewsCacheDismissed(true)
+        ConfigManager.save()
     }
 }
 
-// Bind news button.
-document.getElementById('newsButton').onclick = () => {
-    // Toggle tabbing.
-    if(newsActive){
-        $('#landingContainer *').removeAttr('tabindex')
-        $('#newsContainer *').attr('tabindex', '-1')
+function openLandingSection(section){
+    if(getCurrentView() === VIEWS.settings){
+        switchView(getCurrentView(), VIEWS.landing, 200, 200, () => {}, () => {
+            setLandingSection(section)
+        })
     } else {
-        $('#landingContainer *').attr('tabindex', '-1')
-        $('#newsContainer, #newsContainer *, #lower, #lower #center *').removeAttr('tabindex')
-        if(newsAlertShown){
-            $('#newsButtonAlert').fadeOut(2000)
-            newsAlertShown = false
-            ConfigManager.setNewsCacheDismissed(true)
-            ConfigManager.save()
-        }
+        setLandingSection(section)
     }
-    slide_(!newsActive)
-    newsActive = !newsActive
 }
+
+document.getElementById('landingPlayButton').onclick = () => openLandingSection('play')
+document.getElementById('landingHomeButton').onclick = () => openLandingSection('play')
+document.getElementById('landingUpdatesButton').onclick = () => openLandingSection('updates')
+document.getElementById('newsButton').onclick = () => openLandingSection('updates')
+document.getElementById('newsPreviewAction').onclick = () => setLandingSection('updates')
+document.getElementById('newsBackButton').onclick = () => setLandingSection('play')
+setLandingSection('play')
 
 // Array to store article meta.
 let newsArr = null
+
+function setNewsPreviewState(message){
+    const newsCards = document.getElementById('newsCards')
+    const state = document.createElement('div')
+    state.className = 'newsPreviewState'
+    state.textContent = message
+    newsCards.replaceChildren(state)
+}
+
+function renderNewsCards(articles){
+    if(articles == null){
+        setNewsPreviewState(Lang.queryJS('landing.news.previewFailed'))
+        return
+    }
+    if(articles.length === 0){
+        setNewsPreviewState(Lang.queryJS('landing.news.previewEmpty'))
+        return
+    }
+
+    const newsCards = document.getElementById('newsCards')
+    const fragment = document.createDocumentFragment()
+    articles.slice(0, 3).forEach((article, index) => {
+        const card = document.createElement('button')
+        card.type = 'button'
+        card.className = 'newsPreviewCard'
+
+        const artwork = document.createElement('span')
+        artwork.className = 'newsPreviewArtwork'
+        artwork.style.backgroundImage = `url('${article.image || `assets/images/backgrounds/${index}.jpg`}')`
+
+        const copy = document.createElement('span')
+        copy.className = 'newsPreviewCardCopy'
+        const date = document.createElement('span')
+        date.className = 'newsPreviewCardDate'
+        date.textContent = article.date
+        const title = document.createElement('span')
+        title.className = 'newsPreviewCardTitle'
+        title.textContent = article.title
+        copy.append(date, title)
+        card.append(artwork, copy)
+        card.onclick = () => {
+            displayArticle(article, index + 1)
+            setLandingSection('updates')
+        }
+        fragment.appendChild(card)
+    })
+    newsCards.replaceChildren(fragment)
+}
 
 // News load animation listener.
 let newsLoadingListener = null
@@ -826,6 +1019,7 @@ async function initNews(){
     if(newsArr == null){
         // News Loading Failed
         setNewsLoading(false)
+        renderNewsCards(null)
 
         await $('#newsErrorLoading').fadeOut(250).promise()
         await $('#newsErrorFailed').fadeIn(250).promise()
@@ -833,6 +1027,7 @@ async function initNews(){
     } else if(newsArr.length === 0) {
         // No News Articles
         setNewsLoading(false)
+        renderNewsCards([])
 
         ConfigManager.setNewsCache({
             date: null,
@@ -846,6 +1041,7 @@ async function initNews(){
     } else {
         // Success
         setNewsLoading(false)
+        renderNewsCards(newsArr)
 
         const lN = newsArr[0]
         const cached = ConfigManager.getNewsCache()
@@ -996,6 +1192,8 @@ async function loadNews(){
                     let link   = el.find('link').text()
                     let title  = el.find('title').text()
                     let author = el.find('dc\\:creator').text()
+                    const imageMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i)
+                    const image = imageMatch == null ? null : imageMatch[1]
 
                     // Generate article.
                     articles.push(
@@ -1005,6 +1203,7 @@ async function loadNews(){
                             date,
                             author,
                             content,
+                            image,
                             comments,
                             commentsLink: link + '#comments'
                         }

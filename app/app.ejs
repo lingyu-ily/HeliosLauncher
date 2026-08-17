@@ -15,8 +15,8 @@
         }
         #main {
             display: none;
-            height: calc(100% - 22px);
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
+            height: 100%;
+            background: #171615;
             width: 100%;
             position: absolute;
             z-index: 10;
@@ -27,14 +27,16 @@
     </style>
 </head>
 <body bkid="<%=bkid%>">
-    <%- include('frame') %>
     <div id="main">
         <%- include('welcome') %>
         <%- include('login') %>
         <%- include('waiting') %>
         <%- include('loginOptions') %>
-        <%- include('settings') %>
-        <%- include('landing') %>
+        <div id="launcherShell" style="display: none;">
+            <%- include('sidebar') %>
+            <%- include('settings') %>
+            <%- include('landing') %>
+        </div>
     </div>
     <%- include('overlay') %>
     <div id="loadingContainer">

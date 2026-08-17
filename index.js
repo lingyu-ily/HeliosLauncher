@@ -225,10 +225,13 @@ let win
 function createWindow() {
 
     win = new BrowserWindow({
+        title: LangLoader.queryEJS('app.title'),
         width: 980,
         height: 552,
+        minWidth: 900,
+        minHeight: 540,
         icon: getPlatformIcon('SealCircle'),
-        frame: false,
+        frame: true,
         webPreferences: {
             preload: path.join(__dirname, 'app', 'assets', 'js', 'preloader.js'),
             nodeIntegration: true,

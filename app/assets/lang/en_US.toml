@@ -17,6 +17,20 @@ newsErrorLoadSpan = "Checking for News.."
 newsErrorFailedSpan = "Failed to Load News"
 newsErrorRetryButton = "Try Again"
 newsErrorNoneSpan = "No News"
+accountType = "Minecraft account"
+navHome = "Home"
+navServers = "Servers"
+navWhatsNew = "What's New?"
+navPlay = "Play"
+navMods = "Mods"
+navUpdates = "Patch Notes"
+serverListLoading = "Loading servers…"
+heroTagline = "YOUR NEXT ADVENTURE STARTS HERE"
+selectedServerLabel = "Selected server"
+servicesLabel = "Services"
+newsPreviewTitle = "Latest from MapleCraft"
+newsPreviewAction = "View all"
+backToPlay = "Back to Play"
 
 [ejs.login]
 loginCancelText = "Cancel"
@@ -41,15 +55,13 @@ loginWithMojang = "Login with Mojang"
 cancelButton = "Cancel"
 
 [ejs.overlay]
-serverSelectHeader = "Available Servers"
-serverSelectConfirm = "Select"
-serverSelectCancel = "Cancel"
 accountSelectHeader = "Select an Account"
 accountSelectConfirm = "Select"
 accountSelectCancel = "Cancel"
 
 [ejs.settings]
 navHeaderText = "Settings"
+tabsAriaLabel = "Settings categories"
 navAccount = "Account"
 navMinecraft = "Minecraft"
 navMods = "Mods"
@@ -160,10 +172,17 @@ okay = "Okay"
 
 [js.landing.selectedAccount]
 noAccountSelected = "No Account Selected"
+noAccountType = "Sign in to play"
+microsoft = "Microsoft account"
+mojang = "Mojang account"
 
 [js.landing.selectedServer]
 noSelection = "No Server Selected"
 loading = "Loading.."
+
+[js.landing.serverList]
+failed = "Unable to load servers"
+empty = "No servers available"
 
 [js.landing.serverStatus]
 server = "SERVER"
@@ -210,6 +229,8 @@ checkConsoleForDetails = "Please check the console (CTRL + Shift + i) for more d
 
 [js.landing.news]
 checking = "Checking for News"
+previewFailed = "Unable to load the latest news."
+previewEmpty = "There is no news yet."
 
 [js.landing.discord]
 loading = "Loading game.."
@@ -222,6 +243,13 @@ dismiss = "Dismiss"
 [js.settings.fileSelectors]
 executables = "Executables"
 allFiles = "All Files"
+
+[js.settings.save]
+invalidTitle = "Fix Invalid Settings"
+invalidMessage = "One or more values are invalid. Correct the highlighted field before leaving Settings."
+failedTitle = "Settings Were Not Saved"
+failedMessage = "The launcher could not save your changes. Try again before leaving Settings."
+okButton = "OK"
 
 [js.settings.mstfLogin]
 errorTitle = "Something Went Wrong"

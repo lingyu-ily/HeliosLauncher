@@ -9,8 +9,10 @@ mediaXURL = "#"
 mediaInstagramURL = "#"
 mediaYouTubeURL = "#"
 mediaDiscordURL = "https://discord.gg/NX5xebH"
+heroTagline = "下一場冒險，從這裡開始"
 
 [ejs.settings]
+tabsAriaLabel = "設定分類"
 sourceGithubLink = "https://github.com/lingyu-ily/MapleCraftLauncher"
 supportLink = "https://github.com/lingyu-ily/MapleCraftLauncher/issues"
 

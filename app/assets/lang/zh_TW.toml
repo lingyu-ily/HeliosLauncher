@@ -17,6 +17,20 @@ newsErrorLoadSpan = "正在讀取最新消息…"
 newsErrorFailedSpan = "無法載入最新消息"
 newsErrorRetryButton = "重試"
 newsErrorNoneSpan = "沒有最新消息"
+accountType = "Minecraft 帳號"
+navHome = "首頁"
+navServers = "伺服器"
+navWhatsNew = "有什麼新內容？"
+navPlay = "開始遊戲"
+navMods = "模組"
+navUpdates = "更新說明"
+serverListLoading = "正在載入伺服器…"
+heroTagline = "下一場冒險，從這裡開始"
+selectedServerLabel = "目前伺服器"
+servicesLabel = "服務"
+newsPreviewTitle = "MapleCraft 最新消息"
+newsPreviewAction = "查看全部"
+backToPlay = "返回開始遊戲"
 
 [ejs.login]
 loginCancelText = "取消"
@@ -41,15 +55,13 @@ loginWithMojang = "使用 Mojang 登入"
 cancelButton = "取消"
 
 [ejs.overlay]
-serverSelectHeader = "可用伺服器"
-serverSelectConfirm = "選擇"
-serverSelectCancel = "取消"
 accountSelectHeader = "選擇帳號"
 accountSelectConfirm = "選擇"
 accountSelectCancel = "取消"
 
 [ejs.settings]
 navHeaderText = "設定"
+tabsAriaLabel = "設定分類"
 navAccount = "帳號"
 navMinecraft = "Minecraft"
 navMods = "模組"
@@ -159,10 +171,17 @@ okay = "確定"
 
 [js.landing.selectedAccount]
 noAccountSelected = "尚未選擇帳號"
+noAccountType = "登入後即可遊玩"
+microsoft = "Microsoft 帳號"
+mojang = "Mojang 帳號"
 
 [js.landing.selectedServer]
 noSelection = "尚未選擇伺服器"
 loading = "載入中…"
+
+[js.landing.serverList]
+failed = "無法載入伺服器"
+empty = "目前沒有可用伺服器"
 
 [js.landing.serverStatus]
 server = "伺服器"
@@ -209,6 +228,8 @@ checkConsoleForDetails = "請查看主控台（CTRL + Shift + i）以取得詳�
 
 [js.landing.news]
 checking = "正在檢查最新消息"
+previewFailed = "無法載入最新消息。"
+previewEmpty = "目前沒有最新消息。"
 
 [js.landing.discord]
 loading = "正在載入遊戲…"
@@ -221,6 +242,13 @@ dismiss = "關閉"
 [js.settings.fileSelectors]
 executables = "執行檔"
 allFiles = "所有檔案"
+
+[js.settings.save]
+invalidTitle = "請修正無效設定"
+invalidMessage = "部分數值無效，請修正標示的欄位後再離開設定頁。"
+failedTitle = "設定尚未儲存"
+failedMessage = "啟動器無法儲存變更，請在離開設定頁前再試一次。"
+okButton = "確定"
 
 [js.settings.mstfLogin]
 errorTitle = "發生問題"

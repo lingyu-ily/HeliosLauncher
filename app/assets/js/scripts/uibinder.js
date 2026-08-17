@@ -23,8 +23,35 @@ const VIEWS = {
     waiting: '#waitingContainer'
 }
 
+const LAUNCHER_SHELL_VIEWS = new Set([VIEWS.landing, VIEWS.settings])
+
 // The currently shown view container.
 let currentView
+
+function isLauncherShellView(view){
+    return LAUNCHER_SHELL_VIEWS.has(view)
+}
+
+function syncLauncherShell(view){
+    const launcherShell = document.getElementById('launcherShell')
+    if(launcherShell == null){
+        return
+    }
+
+    launcherShell.style.display = isLauncherShellView(view) ? 'flex' : 'none'
+
+    const settingsButton = document.getElementById('settingsMediaButton')
+    const homeButton = document.getElementById('landingHomeButton')
+    const newsButton = document.getElementById('newsButton')
+    const settingsSelected = view === VIEWS.settings
+
+    settingsButton?.toggleAttribute('selected', settingsSelected)
+    settingsButton?.setAttribute('aria-current', settingsSelected ? 'page' : 'false')
+    if(settingsSelected){
+        homeButton?.removeAttribute('selected')
+        newsButton?.removeAttribute('selected')
+    }
+}
 
 /**
  * Switch launcher views.
@@ -39,13 +66,21 @@ let currentView
  * fades in.
  */
 function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, onCurrentFade = () => {}, onNextFade = () => {}){
+    if(current === VIEWS.settings && next !== VIEWS.settings && typeof saveSettingsBeforeExit === 'function'){
+        if(!saveSettingsBeforeExit()){
+            return false
+        }
+    }
+
     currentView = next
     $(`${current}`).fadeOut(currentFadeTime, async () => {
         await onCurrentFade()
+        syncLauncherShell(next)
         $(`${next}`).fadeIn(nextFadeTime, async () => {
             await onNextFade()
         })
     })
+    return true
 }
 
 /**
@@ -65,10 +100,10 @@ async function showMainUI(data){
     }
 
     await prepareSettings(true)
+    renderServerSidebar(data)
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
     refreshServerStatus()
     setTimeout(() => {
-        document.getElementById('frameBar').style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
         document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.jpg')`
         $('#main').show()
 
@@ -86,6 +121,7 @@ async function showMainUI(data){
         } else {
             if(isLoggedIn){
                 currentView = VIEWS.landing
+                syncLauncherShell(VIEWS.landing)
                 $(VIEWS.landing).fadeIn(1000)
             } else {
                 loginOptionsCancelEnabled(false)
@@ -103,10 +139,7 @@ async function showMainUI(data){
         }, 250)
         
     }, 750)
-    // Disable tabbing to the news container.
-    initNews().then(() => {
-        $('#newsContainer *').attr('tabindex', '-1')
-    })
+    initNews()
 }
 
 function showFatalStartupError(){
@@ -133,6 +166,7 @@ function showFatalStartupError(){
  * @param {Object} data The distro index object.
  */
 function onDistroRefresh(data){
+    renderServerSidebar(data)
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
     refreshServerStatus()
     initNews()

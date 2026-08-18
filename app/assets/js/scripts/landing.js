@@ -178,13 +178,6 @@ document.getElementById('settingsMediaButton').onclick = async e => {
     switchView(getCurrentView(), VIEWS.settings)
 }
 
-document.getElementById('landingModsButton').onclick = async () => {
-    await prepareSettings()
-    switchView(getCurrentView(), VIEWS.settings, 200, 200, () => {
-        settingsNavItemListener(document.getElementById('settingsNavMods'), false)
-    })
-}
-
 // Bind avatar overlay button.
 document.getElementById('avatarOverlay').onclick = async e => {
     if(getCurrentView() === VIEWS.settings){
@@ -287,7 +280,9 @@ function renderServerSidebar(distro){
                 switchView(getCurrentView(), VIEWS.landing, 200, 200, () => {}, async () => {
                     setLandingSection('play')
                     if(ConfigManager.getSelectedServer() !== server.id){
-                        updateSelectedServer(serv)
+                        if(updateSelectedServer(serv) === false){
+                            return
+                        }
                         await refreshServerStatus(true)
                     }
                 })
@@ -297,7 +292,9 @@ function renderServerSidebar(distro){
                 item.focus()
                 return
             }
-            updateSelectedServer(serv)
+            if(updateSelectedServer(serv) === false){
+                return
+            }
             await refreshServerStatus(true)
         }
         fragment.appendChild(item)
@@ -397,6 +394,10 @@ async function applyServerPresentation(serv){
 }
 
 function updateSelectedServer(serv){
+    if(getLandingSection() === 'mods' && !commitLandingModsView()){
+        return false
+    }
+    invalidateLandingModsView()
     if(getCurrentView() === VIEWS.settings){
         fullSettingsSave()
     }
@@ -421,6 +422,10 @@ function updateSelectedServer(serv){
     setLaunchEnabled(serv != null)
     void applyServerPresentation(serv)
     void initNews()
+    if(getCurrentView() === VIEWS.landing && getLandingSection() === 'mods'){
+        void prepareLandingModsView()
+    }
+    return true
 }
 // Real text is set in uibinder.js on distributionIndexDone.
 selectedServerName.textContent = Lang.queryJS('landing.selectedServer.loading')
@@ -916,29 +921,59 @@ const newsArticleContentScrollable  = document.getElementById('newsArticleConten
 const nELoadSpan                    = document.getElementById('nELoadSpan')
 
 let newsActive = false
+let activeLandingSection = 'play'
+
+function getLandingSection(){
+    return activeLandingSection
+}
 
 function setLandingSection(section){
-    const showUpdates = section === 'updates'
-    const playView = document.getElementById('landingPlayView')
-    const newsView = document.getElementById('newsContainer')
+    if(!['play', 'mods', 'updates'].includes(section)){
+        return false
+    }
+    if(activeLandingSection === 'mods' && section !== 'mods' && !commitLandingModsView()){
+        return false
+    }
+
+    const sections = {
+        play: document.getElementById('landingPlayView'),
+        mods: document.getElementById('landingModsView'),
+        updates: document.getElementById('newsContainer')
+    }
+    const tabs = {
+        play: document.getElementById('landingPlayButton'),
+        mods: document.getElementById('landingModsButton'),
+        updates: document.getElementById('landingUpdatesButton')
+    }
     const workspaceScroll = document.getElementById('landingWorkspaceScroll')
 
-    playView.hidden = showUpdates
-    newsView.hidden = !showUpdates
-    newsView.setAttribute('aria-hidden', (!showUpdates).toString())
-    document.getElementById('landingPlayButton').toggleAttribute('selected', !showUpdates)
-    document.getElementById('landingUpdatesButton').toggleAttribute('selected', showUpdates)
-    document.getElementById('landingHomeButton').toggleAttribute('selected', !showUpdates)
+    for(const [name, view] of Object.entries(sections)){
+        const selected = name === section
+        view.hidden = !selected
+        view.setAttribute('aria-hidden', (!selected).toString())
+        tabs[name].toggleAttribute('selected', selected)
+        tabs[name].setAttribute('aria-selected', selected.toString())
+        tabs[name].tabIndex = selected ? 0 : -1
+    }
+
+    activeLandingSection = section
+    const showUpdates = section === 'updates'
+    document.getElementById('landingHomeButton').toggleAttribute('selected', section === 'play')
     document.getElementById('newsButton').toggleAttribute('selected', showUpdates)
     newsActive = showUpdates
-    workspaceScroll.scrollTo({ top: 0, behavior: 'smooth' })
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    workspaceScroll.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
 
+    if(section === 'mods'){
+        void prepareLandingModsView()
+    }
     if(showUpdates && newsAlertShown){
         $('#newsButtonAlert').fadeOut(200)
         newsAlertShown = false
         ConfigManager.setNewsCacheDismissed(activeNewsContext.serverId, activeNewsContext.source, true)
         ConfigManager.save()
     }
+    return true
 }
 
 function openLandingSection(section){
@@ -952,11 +987,36 @@ function openLandingSection(section){
 }
 
 document.getElementById('landingPlayButton').onclick = () => openLandingSection('play')
+document.getElementById('landingModsButton').onclick = () => openLandingSection('mods')
 document.getElementById('landingHomeButton').onclick = () => openLandingSection('play')
 document.getElementById('landingUpdatesButton').onclick = () => openLandingSection('updates')
 document.getElementById('newsButton').onclick = () => openLandingSection('updates')
 document.getElementById('newsPreviewAction').onclick = () => setLandingSection('updates')
 document.getElementById('newsBackButton').onclick = () => setLandingSection('play')
+
+document.getElementById('launcherGameTabs').addEventListener('keydown', event => {
+    if(!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)){
+        return
+    }
+    event.preventDefault()
+    const tabs = [
+        document.getElementById('landingPlayButton'),
+        document.getElementById('landingModsButton'),
+        document.getElementById('landingUpdatesButton')
+    ]
+    const currentIndex = Math.max(0, tabs.indexOf(document.activeElement))
+    let nextIndex
+    if(event.key === 'Home'){
+        nextIndex = 0
+    } else if(event.key === 'End'){
+        nextIndex = tabs.length - 1
+    } else {
+        const offset = event.key === 'ArrowRight' ? 1 : -1
+        nextIndex = (currentIndex + offset + tabs.length) % tabs.length
+    }
+    tabs[nextIndex].focus()
+    tabs[nextIndex].click()
+})
 setLandingSection('play')
 
 // Array to store article meta.

@@ -2,15 +2,15 @@
     <section id="launcherWorkspace">
         <header id="launcherGameHeader">
             <span id="launcherGameEyebrow">MAPLECRAFT</span>
-            <nav id="launcherGameTabs" aria-label="MapleCraft">
-                <button id="landingPlayButton" class="launcherGameTab" type="button" selected><%- lang('landing.navPlay') %></button>
-                <button id="landingModsButton" class="launcherGameTab" type="button"><%- lang('landing.navMods') %></button>
-                <button id="landingUpdatesButton" class="launcherGameTab" type="button"><%- lang('landing.navUpdates') %></button>
+            <nav id="launcherGameTabs" role="tablist" aria-label="<%- lang('landing.tabsAriaLabel') %>">
+                <button id="landingPlayButton" class="launcherGameTab" type="button" role="tab" aria-controls="landingPlayView" aria-selected="true" tabindex="0" selected><%- lang('landing.navPlay') %></button>
+                <button id="landingModsButton" class="launcherGameTab" type="button" role="tab" aria-controls="landingModsView" aria-selected="false" tabindex="-1"><%- lang('landing.navMods') %></button>
+                <button id="landingUpdatesButton" class="launcherGameTab" type="button" role="tab" aria-controls="newsContainer" aria-selected="false" tabindex="-1"><%- lang('landing.navUpdates') %></button>
             </nav>
         </header>
 
         <div id="landingWorkspaceScroll">
-            <main id="landingPlayView">
+            <main id="landingPlayView" class="landingSectionView" role="tabpanel" aria-labelledby="landingPlayButton">
                 <section id="launcherHero" data-default-background="assets/images/backgrounds/<%=bkid%>.jpg" style="background-image: url('assets/images/backgrounds/<%=bkid%>.jpg');">
                     <div id="launcherHeroShade"></div>
                     <div id="image_seal_container">
@@ -72,7 +72,56 @@
                 </section>
             </main>
 
-            <section id="newsContainer" aria-hidden="true">
+            <section id="landingModsView" class="landingSectionView" role="tabpanel" aria-labelledby="landingModsButton" aria-hidden="true" hidden>
+                <header id="landingModsHeader">
+                    <h1><%- lang('landing.modsTitle') %></h1>
+                    <p><%- lang('landing.modsDescription') %></p>
+                </header>
+                <div id="landingModsStatus" role="status" aria-live="polite">
+                    <span id="landingModsStatusText"><%- lang('landing.modsLoading') %></span>
+                    <button id="landingModsRetryButton" type="button" hidden><%- lang('landing.modsRetry') %></button>
+                </div>
+                <div id="landingModsContent" hidden>
+                    <section id="landingModsServer" aria-label="<%- lang('landing.modsSelectedServer') %>">
+                        <img id="landingModsServerIcon" src="assets/images/SealCircle.png" alt=""/>
+                        <span id="landingModsServerCopy">
+                            <span id="landingModsServerLabel"><%- lang('landing.modsSelectedServer') %></span>
+                            <strong id="landingModsServerName"></strong>
+                            <span id="landingModsServerVersion"></span>
+                        </span>
+                        <span id="landingModsServerHint"><%- lang('landing.modsSwitchHint') %></span>
+                    </section>
+                    <div id="landingModsEmpty" role="status" hidden><%- lang('landing.modsEmpty') %></div>
+                    <div id="settingsModsContainer">
+                        <section id="settingsReqModsContainer">
+                            <h2 class="settingsModsHeader"><%- lang('landing.modsRequired') %></h2>
+                            <div id="settingsReqModsContent"></div>
+                        </section>
+                        <section id="settingsOptModsContainer">
+                            <h2 class="settingsModsHeader"><%- lang('landing.modsOptional') %></h2>
+                            <div id="settingsOptModsContent"></div>
+                        </section>
+                        <section id="settingsDropinModsContainer">
+                            <h2 class="settingsModsHeader"><%- lang('landing.modsDropin') %></h2>
+                            <button id="settingsDropinFileSystemButton" type="button"><%- lang('landing.modsAdd') %> <span id="settingsDropinRefreshNote"><%- lang('landing.modsRefreshNote') %></span></button>
+                            <div id="settingsDropinModsContent"></div>
+                        </section>
+                        <section id="settingsShadersContainer">
+                            <h2 class="settingsModsHeader"><%- lang('landing.modsShaderpacks') %></h2>
+                            <div id="settingsShaderpackDesc"><%- lang('landing.modsShaderpackDesc') %></div>
+                            <div id="settingsShaderpackWrapper">
+                                <button id="settingsShaderpackButton" type="button" aria-label="<%- lang('landing.modsAddShaderpack') %>">+</button>
+                                <div class="settingsSelectContainer">
+                                    <button class="settingsSelectSelected" id="settingsShadersSelected" type="button" aria-haspopup="listbox" aria-expanded="false"><%- lang('landing.modsSelectShaderpack') %></button>
+                                    <div class="settingsSelectOptions" id="settingsShadersOptions" role="listbox" hidden></div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </section>
+
+            <section id="newsContainer" class="landingSectionView" role="tabpanel" aria-labelledby="landingUpdatesButton" aria-hidden="true" hidden>
                 <div id="newsViewHeader">
                     <div>
                         <span id="newsViewEyebrow">MAPLECRAFT</span>
@@ -128,5 +177,6 @@
             </div>
         </div>
     </section>
+    <script src="./assets/js/scripts/mods.js"></script>
     <script src="./assets/js/scripts/landing.js"></script>
 </div>

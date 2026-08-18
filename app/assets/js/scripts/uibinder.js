@@ -66,6 +66,11 @@ function syncLauncherShell(view){
  * fades in.
  */
 function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, onCurrentFade = () => {}, onNextFade = () => {}){
+    if(current === VIEWS.landing && next !== VIEWS.landing && typeof getLandingSection === 'function' && getLandingSection() === 'mods' && typeof commitLandingModsView === 'function'){
+        if(!commitLandingModsView()){
+            return false
+        }
+    }
     if(current === VIEWS.settings && next !== VIEWS.settings && typeof saveSettingsBeforeExit === 'function'){
         if(!saveSettingsBeforeExit()){
             return false
@@ -166,9 +171,9 @@ function showFatalStartupError(){
  */
 function onDistroRefresh(data){
     renderServerSidebar(data)
+    syncModConfigurations(data)
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
     refreshServerStatus()
-    syncModConfigurations(data)
     ensureJavaSettings(data)
 }
 
@@ -493,6 +498,6 @@ async function devModeToggle() {
     DistroAPI.toggleDevMode(true)
     const data = await DistroAPI.refreshDistributionOrFallback()
     ensureJavaSettings(data)
-    updateSelectedServer(data.servers[0])
     syncModConfigurations(data)
+    updateSelectedServer(data.servers[0])
 }

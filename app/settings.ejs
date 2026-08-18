@@ -7,7 +7,6 @@
             <div id="settingsNavItemsContent" role="tablist" aria-label="<%- lang('settings.tabsAriaLabel') %>">
                 <button class="settingsNavItem" rSc="settingsTabAccount" id="settingsNavAccount" role="tab" aria-controls="settingsTabAccount" aria-selected="true" tabindex="0" selected><%- lang('settings.navAccount') %></button>
                 <button class="settingsNavItem" rSc="settingsTabMinecraft" id="settingsNavMinecraft" role="tab" aria-controls="settingsTabMinecraft" aria-selected="false" tabindex="-1"><%- lang('settings.navMinecraft') %></button>
-                <button class="settingsNavItem" rSc="settingsTabMods" id="settingsNavMods" role="tab" aria-controls="settingsTabMods" aria-selected="false" tabindex="-1"><%- lang('settings.navMods') %></button>
                 <button class="settingsNavItem" rSc="settingsTabJava" id="settingsNavJava" role="tab" aria-controls="settingsTabJava" aria-selected="false" tabindex="-1"><%- lang('settings.navJava') %></button>
                 <button class="settingsNavItem" rSc="settingsTabLauncher" id="settingsNavLauncher" role="tab" aria-controls="settingsTabLauncher" aria-selected="false" tabindex="-1"><%- lang('settings.navLauncher') %></button>
                 <button class="settingsNavItem" rSc="settingsTabAbout" id="settingsNavAbout" role="tab" aria-controls="settingsTabAbout" aria-selected="false" tabindex="-1"><%- lang('settings.navAbout') %></button>
@@ -107,56 +106,6 @@
                         <input type="checkbox" cValue="LaunchDetached">
                         <span class="toggleSwitchSlider"></span>
                     </label>
-                </div>
-            </div>
-        </div>
-        <div id="settingsTabMods" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavMods" tabindex="0" style="display: none;">
-            <div class="settingsTabHeader">
-                <span class="settingsTabHeaderText"><%- lang('settings.tabModsHeaderText') %></span>
-                <span class="settingsTabHeaderDesc"><%- lang('settings.tabModsHeaderDesc') %></span>
-            </div>
-            <div class="settingsSelServContainer">
-                <div class="settingsSelServContent">
-
-                </div>
-                <div class="settingsSwitchServerContainer">
-                    <div class="settingsSwitchServerContent">
-                        <button class="settingsSwitchServerButton"><%- lang('settings.switchServerButton') %></button>
-                    </div>
-                </div>
-            </div>
-            <div id="settingsModsContainer">
-                <div id="settingsReqModsContainer">
-                    <div class="settingsModsHeader"><%- lang('settings.requiredMods') %></div>
-                    <div id="settingsReqModsContent">
-
-                    </div>
-                </div>
-                <div id="settingsOptModsContainer">
-                    <div class="settingsModsHeader"><%- lang('settings.optionalMods') %></div>
-                    <div id="settingsOptModsContent">
-                        
-                    </div>
-                </div>
-                <div id="settingsDropinModsContainer">
-                    <div class="settingsModsHeader"><%- lang('settings.dropinMods') %></div>
-                    <button id="settingsDropinFileSystemButton"><%- lang('settings.addMods') %> <span id="settingsDropinRefreshNote"><%- lang('settings.dropinRefreshNote') %></span></button>
-                    <div id="settingsDropinModsContent">
-                        
-                    </div>
-                </div>
-                <div id="settingsShadersContainer">
-                    <div class="settingsModsHeader"><%- lang('settings.shaderpacks') %></div>
-                    <div id="settingsShaderpackDesc"><%- lang('settings.shaderpackDesc') %></div>
-                    <div id="settingsShaderpackWrapper">
-                        <button id="settingsShaderpackButton"> + </button>
-                        <div class="settingsSelectContainer">
-                            <div class="settingsSelectSelected" id="settingsShadersSelected"><%- lang('settings.selectShaderpack') %></div>
-                            <div class="settingsSelectOptions" id="settingsShadersOptions" hidden>
-
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

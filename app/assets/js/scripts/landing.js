@@ -2,6 +2,7 @@
  * Script for landing.ejs
  */
 // Requirements
+const { clipboard }           = require('electron')
 const { URL }                 = require('url')
 const {
     MojangRestAPI,
@@ -40,6 +41,7 @@ const launch_details_text     = document.getElementById('launch_details_text')
 const server_selection_button = document.getElementById('server_selection_button')
 const user_text               = document.getElementById('user_text')
 const launchAccountName       = document.getElementById('launchAccountName')
+const launchAccountCopyFeedback = document.getElementById('launchAccountCopyFeedback')
 const accountTypeText         = document.getElementById('accountTypeText')
 const avatarOverlay           = document.getElementById('avatarOverlay')
 const avatarContainer         = document.getElementById('avatarContainer')
@@ -73,6 +75,50 @@ const loggerLanding = LoggerUtil.getLogger('Landing')
 const launchButtonDefaultText = launch_button.textContent
 let launchInProgress = false
 let launchServerAvailable = false
+let accountCopyFeedbackSequence = 0
+let accountCopyFeedbackTimer = null
+
+function clearLaunchAccountCopyFeedback(){
+    accountCopyFeedbackSequence++
+    clearTimeout(accountCopyFeedbackTimer)
+    launchAccountCopyFeedback.removeAttribute('visible')
+    launchAccountCopyFeedback.removeAttribute('error')
+    launchAccountCopyFeedback.textContent = ''
+}
+
+function showLaunchAccountCopyFeedback(message, failed = false){
+    const feedbackSequence = ++accountCopyFeedbackSequence
+    clearTimeout(accountCopyFeedbackTimer)
+    launchAccountCopyFeedback.removeAttribute('visible')
+    launchAccountCopyFeedback.toggleAttribute('error', failed)
+    launchAccountCopyFeedback.textContent = ''
+    requestAnimationFrame(() => {
+        if(feedbackSequence !== accountCopyFeedbackSequence){
+            return
+        }
+        launchAccountCopyFeedback.textContent = message
+        launchAccountCopyFeedback.setAttribute('visible', '')
+        accountCopyFeedbackTimer = setTimeout(() => {
+            if(feedbackSequence === accountCopyFeedbackSequence){
+                launchAccountCopyFeedback.removeAttribute('visible')
+            }
+        }, 1500)
+    })
+}
+
+launchAccountName.onclick = () => {
+    const displayName = ConfigManager.getSelectedAccount()?.displayName
+    if(typeof displayName !== 'string' || displayName.trim().length === 0){
+        return
+    }
+    try {
+        clipboard.writeText(displayName)
+        showLaunchAccountCopyFeedback(Lang.queryJS('landing.accountCopy.copied'))
+    } catch(err) {
+        loggerLanding.warn('Failed to copy the player name to the clipboard.', err)
+        showLaunchAccountCopyFeedback(Lang.queryJS('landing.accountCopy.failed'), true)
+    }
+}
 
 /* Launch Progress Wrapper Functions */
 
@@ -401,6 +447,7 @@ function updateSelectedAccount(authUser){
     const avatarRequestSequence = ++accountAvatarRequestSequence
     let username = Lang.queryJS('landing.selectedAccount.noAccountSelected')
     let accountType = Lang.queryJS('landing.selectedAccount.noAccountType')
+    clearLaunchAccountCopyFeedback()
     avatarContainer.style.backgroundImage = ''
     if(authUser != null){
         if(authUser.displayName != null){
@@ -425,6 +472,7 @@ function updateSelectedAccount(authUser){
     }
     user_text.textContent = username
     launchAccountName.textContent = username
+    launchAccountName.disabled = typeof authUser?.displayName !== 'string' || authUser.displayName.trim().length === 0
     accountTypeText.textContent = accountType
     renderAccountMenu()
 }

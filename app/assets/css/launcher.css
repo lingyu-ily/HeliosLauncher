@@ -4997,7 +4997,7 @@ button:disabled {
 }
 
 #server_selection_button {
-    width: min(100%, 350px);
+    width: min(66.67%, 233px);
     min-width: 0;
     display: flex;
     align-items: center;
@@ -5218,7 +5218,7 @@ button:disabled {
 
 .bot_label {
     color: #bbb6b0;
-    font-size: 8px;
+    font-size: 12px;
     letter-spacing: 0.3px;
     text-shadow: none;
 }
@@ -5226,22 +5226,87 @@ button:disabled {
 #player_count {
     margin: 0;
     color: #fff;
-    font-size: 9px;
+    font-size: 14px;
     text-shadow: none;
 }
 
 #mojang_status_icon {
     margin: 0;
-    font-size: 10px;
+    font-size: 15px;
+}
+
+#launchAccountCopy {
+    position: relative;
+    min-width: 0;
+    display: flex;
+    align-items: center;
 }
 
 #launchAccountName {
-    max-width: 110px;
+    max-width: 180px;
     overflow: hidden;
+    padding: 3px 5px;
+    border: 1px solid transparent;
+    background: transparent;
     color: #eee;
-    font-size: 10px;
+    cursor: copy;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.1;
+    text-align: right;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+#launchAccountName:hover,
+#launchAccountName:focus-visible {
+    border-color: #77716a;
+    background: #302d2a;
+    outline: none;
+}
+
+#launchAccountName:disabled {
+    border-color: transparent;
+    background: transparent;
+    color: #8d8882;
+    cursor: default;
+}
+
+#launchAccountCopyFeedback {
+    position: absolute;
+    z-index: 20;
+    right: 0;
+    bottom: calc(100% + 8px);
+    padding: 6px 9px;
+    border: 1px solid #52983d;
+    background: #1f3d18;
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.45);
+    color: #f3fff0;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity 150ms ease, transform 150ms ease;
+    white-space: nowrap;
+}
+
+#launchAccountCopyFeedback[visible] {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#launchAccountCopyFeedback[error] {
+    border-color: #a64b45;
+    background: #4a211e;
+    color: #ffd8d4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #launchAccountCopyFeedback {
+        transition: none;
+    }
 }
 
 #mojangStatusTooltip {

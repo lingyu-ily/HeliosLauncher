@@ -7,6 +7,7 @@ accountListLabel = "Signed-in accounts"
 accountMenuEmpty = "No accounts are signed in"
 accountMenuLogout = "Log out of current account"
 accountMenuManage = "View all accounts"
+copyPlayerName = "Copy player name"
 settingsTooltip = "Settings"
 serverStatus = "SERVER"
 serverStatusPlaceholder = "OFFLINE"
@@ -221,6 +222,10 @@ mojang = "Mojang account"
 
 [js.landing.accountMenu]
 current = "Current account"
+
+[js.landing.accountCopy]
+copied = "Copied"
+failed = "Unable to copy"
 
 [js.landing.selectedServer]
 noSelection = "No Server Selected"

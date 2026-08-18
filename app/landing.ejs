@@ -55,7 +55,10 @@
                                 <div id="mojangStatusNonEssentialContainer"></div>
                             </div>
                         </div>
-                        <span id="launchAccountName"><%- lang('landing.usernamePlaceholder') %></span>
+                        <span id="launchAccountCopy">
+                            <button id="launchAccountName" type="button" aria-label="<%- lang('landing.copyPlayerName') %>" disabled><%- lang('landing.usernamePlaceholder') %></button>
+                            <span id="launchAccountCopyFeedback" role="status" aria-live="polite" aria-atomic="true"></span>
+                        </span>
                     </div>
                 </section>
 

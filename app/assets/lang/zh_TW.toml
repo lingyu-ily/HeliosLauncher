@@ -7,6 +7,7 @@ accountListLabel = "已登入帳號"
 accountMenuEmpty = "目前沒有已登入的帳號"
 accountMenuLogout = "登出目前帳號"
 accountMenuManage = "查看所有帳號"
+copyPlayerName = "複製玩家名稱"
 settingsTooltip = "設定"
 serverStatus = "伺服器"
 serverStatusPlaceholder = "離線"
@@ -220,6 +221,10 @@ mojang = "Mojang 帳號"
 
 [js.landing.accountMenu]
 current = "目前帳號"
+
+[js.landing.accountCopy]
+copied = "已複製"
+failed = "無法複製"
 
 [js.landing.selectedServer]
 noSelection = "尚未選擇伺服器"

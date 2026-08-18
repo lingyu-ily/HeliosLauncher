@@ -83,6 +83,9 @@ function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, on
             return false
         }
     }
+    if(current !== next && typeof closeAccountMenu === 'function'){
+        closeAccountMenu(false)
+    }
 
     currentView = next
     $(`${current}`).fadeOut(currentFadeTime, async () => {

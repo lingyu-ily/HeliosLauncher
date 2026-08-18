@@ -492,11 +492,11 @@ function bindAuthAccountSelect(){
             for(let i=0; i<selectBtns.length; i++){
                 if(selectBtns[i].hasAttribute('selected')){
                     selectBtns[i].removeAttribute('selected')
-                    selectBtns[i].innerHTML = Lang.queryJS('settings.authAccountSelect.selectButton')
+                    selectBtns[i].textContent = Lang.queryJS('settings.authAccountSelect.selectButton')
                 }
             }
             val.setAttribute('selected', '')
-            val.innerHTML = Lang.queryJS('settings.authAccountSelect.selectedButton')
+            val.textContent = Lang.queryJS('settings.authAccountSelect.selectedButton')
             setSelectedAccount(val.closest('.settingsAuthAccount').getAttribute('uuid'))
         }
     })
@@ -509,125 +509,150 @@ function bindAuthAccountSelect(){
  */
 function bindAuthAccountLogOut(){
     Array.from(document.getElementsByClassName('settingsAuthAccountLogOut')).map((val) => {
-        val.onclick = (e) => {
-            let isLastAccount = false
-            if(Object.keys(ConfigManager.getAuthAccounts()).length === 1){
-                isLastAccount = true
-                setOverlayContent(
-                    Lang.queryJS('settings.authAccountLogout.lastAccountWarningTitle'),
-                    Lang.queryJS('settings.authAccountLogout.lastAccountWarningMessage'),
-                    Lang.queryJS('settings.authAccountLogout.confirmButton'),
-                    Lang.queryJS('settings.authAccountLogout.cancelButton')
-                )
-                setOverlayHandler(() => {
-                    processLogOut(val, isLastAccount)
-                    toggleOverlay(false)
-                })
-                setDismissHandler(() => {
-                    toggleOverlay(false)
-                })
-                toggleOverlay(true, true)
-            } else {
-                processLogOut(val, isLastAccount)
-            }
-            
+        val.onclick = () => {
+            requestAuthAccountLogout(val.closest('.settingsAuthAccount').getAttribute('uuid'), VIEWS.settings)
         }
     })
 }
 
-let msAccDomElementCache
-/**
- * Process a log out.
- * 
- * @param {Element} val The log out button element.
- * @param {boolean} isLastAccount If this logout is on the last added account.
- */
-function processLogOut(val, isLastAccount){
-    const parent = val.closest('.settingsAuthAccount')
-    const uuid = parent.getAttribute('uuid')
-    const prevSelAcc = ConfigManager.getSelectedAccount()
-    const targetAcc = ConfigManager.getAuthAccount(uuid)
-    if(targetAcc.type === 'microsoft') {
-        msAccDomElementCache = parent
-        switchView(getCurrentView(), VIEWS.waiting, 500, 500, () => {
-            ipcRenderer.send(MSFT_OPCODE.OPEN_LOGOUT, uuid, isLastAccount)
-        })
-    } else {
-        AuthManager.removeMojangAccount(uuid).then(() => {
-            if(!isLastAccount && uuid === prevSelAcc.uuid){
-                const selAcc = ConfigManager.getSelectedAccount()
-                refreshAuthAccountSelected(selAcc.uuid)
-                updateSelectedAccount(selAcc)
-                validateSelectedAccount()
-            }
-            if(isLastAccount) {
-                loginOptionsCancelEnabled(false)
-                loginOptionsViewOnLoginSuccess = VIEWS.settings
-                loginOptionsViewOnLoginCancel = VIEWS.loginOptions
-                switchView(getCurrentView(), VIEWS.loginOptions)
-            }
-        })
-        $(parent).fadeOut(250, () => {
-            parent.remove()
-        })
+let pendingAuthLogout = null
+
+function getAuthLogoutReturnView(view){
+    return view === VIEWS.settings ? VIEWS.settings : VIEWS.landing
+}
+
+function requestAuthAccountLogout(uuid, returnView = getCurrentView()){
+    const targetAccount = ConfigManager.getAuthAccount(uuid)
+    if(targetAccount == null){
+        return false
     }
+    const isLastAccount = Object.keys(ConfigManager.getAuthAccounts()).length === 1
+    const normalizedReturnView = getAuthLogoutReturnView(returnView)
+    if(typeof closeAccountMenu === 'function'){
+        closeAccountMenu(false)
+    }
+    setOverlayContent(
+        Lang.queryJS(`settings.authAccountLogout.${isLastAccount ? 'lastAccountWarningTitle' : 'confirmTitle'}`),
+        Lang.queryJS(`settings.authAccountLogout.${isLastAccount ? 'lastAccountWarningMessage' : 'confirmMessage'}`),
+        Lang.queryJS('settings.authAccountLogout.confirmButton'),
+        Lang.queryJS('settings.authAccountLogout.cancelButton')
+    )
+    setOverlayHandler(() => {
+        toggleOverlay(false)
+        beginAuthAccountLogout(uuid, isLastAccount, normalizedReturnView)
+    })
+    setDismissHandler(() => {
+        toggleOverlay(false)
+    })
+    toggleOverlay(true, true)
+    return true
+}
+
+function beginAuthAccountLogout(uuid, isLastAccount, returnView){
+    const targetAccount = ConfigManager.getAuthAccount(uuid)
+    if(targetAccount == null){
+        return false
+    }
+    const operation = {
+        uuid,
+        isLastAccount,
+        returnView,
+        type: targetAccount.type
+    }
+    pendingAuthLogout = operation
+    const started = switchView(getCurrentView(), VIEWS.waiting, 500, 500, () => {
+        if(operation.type === 'microsoft'){
+            ipcRenderer.send(MSFT_OPCODE.OPEN_LOGOUT, uuid, isLastAccount)
+        } else {
+            void AuthManager.removeMojangAccount(uuid)
+                .then(() => completeAuthAccountLogout(operation))
+                .catch(err => {
+                    settingsLogger.error('Failed to log out of the Mojang account.', err)
+                    returnFromAuthAccountLogout(operation, false)
+                })
+        }
+    })
+    if(!started){
+        pendingAuthLogout = null
+    }
+    return started
+}
+
+function prepareAuthLogoutDestination(returnView){
+    return returnView === VIEWS.settings ? prepareSettings() : Promise.resolve()
+}
+
+function returnFromAuthAccountLogout(operation, cancelled, microsoft = false){
+    pendingAuthLogout = null
+    const showFailure = () => {
+        if(cancelled){
+            return
+        }
+        setOverlayContent(
+            Lang.queryJS(microsoft ? 'settings.msftLogout.errorTitle' : 'settings.authAccountLogout.errorTitle'),
+            Lang.queryJS(microsoft ? 'settings.msftLogout.errorMessage' : 'settings.authAccountLogout.errorMessage'),
+            Lang.queryJS('settings.msftLogout.okButton')
+        )
+        setOverlayHandler(() => toggleOverlay(false))
+        toggleOverlay(true)
+    }
+    const current = getCurrentView()
+    if(current === operation.returnView){
+        showFailure()
+        return
+    }
+    switchView(current, operation.returnView, 500, 500, async () => {
+        await prepareAuthLogoutDestination(operation.returnView)
+        showFailure()
+    })
+}
+
+function completeAuthAccountLogout(operation){
+    pendingAuthLogout = null
+    const selectedAccount = ConfigManager.getSelectedAccount()
+    updateSelectedAccount(selectedAccount)
+    if(selectedAccount != null){
+        refreshAuthAccountSelected(selectedAccount.uuid)
+    }
+
+    if(operation.isLastAccount || selectedAccount == null){
+        loginOptionsCancelEnabled(false)
+        loginOptionsViewOnLoginSuccess = operation.returnView
+        loginOptionsViewOnLoginCancel = VIEWS.loginOptions
+        switchView(getCurrentView(), VIEWS.loginOptions)
+        return
+    }
+
+    switchView(getCurrentView(), operation.returnView, 500, 500, async () => {
+        await prepareAuthLogoutDestination(operation.returnView)
+    }, () => {
+        void validateSelectedAccount()
+    })
 }
 
 // Bind reply for Microsoft Logout.
 ipcRenderer.on(MSFT_OPCODE.REPLY_LOGOUT, (_, ...arguments_) => {
+    const operation = pendingAuthLogout ?? {
+        uuid: arguments_[1],
+        isLastAccount: Boolean(arguments_[2]),
+        returnView: VIEWS.settings,
+        type: 'microsoft'
+    }
     if (arguments_[0] === MSFT_REPLY_TYPE.ERROR) {
-        switchView(getCurrentView(), VIEWS.settings, 500, 500, () => {
-
-            if(arguments_.length > 1 && arguments_[1] === MSFT_ERROR.NOT_FINISHED) {
-                // User cancelled.
-                msftLogoutLogger.info('Logout cancelled by user.')
-                return
-            }
-
-            // Unexpected error.
-            setOverlayContent(
-                Lang.queryJS('settings.msftLogout.errorTitle'),
-                Lang.queryJS('settings.msftLogout.errorMessage'),
-                Lang.queryJS('settings.msftLogout.okButton')
-            )
-            setOverlayHandler(() => {
-                toggleOverlay(false)
-            })
-            toggleOverlay(true)
-        })
+        const cancelled = arguments_.length > 1 && arguments_[1] === MSFT_ERROR.NOT_FINISHED
+        if(cancelled){
+            msftLogoutLogger.info('Logout cancelled by user.')
+        }
+        returnFromAuthAccountLogout(operation, cancelled, true)
     } else if(arguments_[0] === MSFT_REPLY_TYPE.SUCCESS) {
-        
         const uuid = arguments_[1]
-        const isLastAccount = arguments_[2]
-        const prevSelAcc = ConfigManager.getSelectedAccount()
-
         msftLogoutLogger.info('Logout Successful. uuid:', uuid)
-        
         AuthManager.removeMicrosoftAccount(uuid)
-            .then(() => {
-                if(!isLastAccount && uuid === prevSelAcc.uuid){
-                    const selAcc = ConfigManager.getSelectedAccount()
-                    refreshAuthAccountSelected(selAcc.uuid)
-                    updateSelectedAccount(selAcc)
-                    validateSelectedAccount()
-                }
-                if(isLastAccount) {
-                    loginOptionsCancelEnabled(false)
-                    loginOptionsViewOnLoginSuccess = VIEWS.settings
-                    loginOptionsViewOnLoginCancel = VIEWS.loginOptions
-                    switchView(getCurrentView(), VIEWS.loginOptions)
-                }
-                if(msAccDomElementCache) {
-                    msAccDomElementCache.remove()
-                    msAccDomElementCache = null
-                }
+            .then(() => completeAuthAccountLogout(operation))
+            .catch(err => {
+                msftLogoutLogger.error('Failed to remove the Microsoft account.', err)
+                returnFromAuthAccountLogout(operation, false, true)
             })
-            .finally(() => {
-                if(!isLastAccount) {
-                    switchView(getCurrentView(), VIEWS.settings, 500, 500)
-                }
-            })
-
     }
 })
 
@@ -642,12 +667,12 @@ function refreshAuthAccountSelected(uuid){
         const selBtn = val.getElementsByClassName('settingsAuthAccountSelect')[0]
         if(uuid === val.getAttribute('uuid')){
             selBtn.setAttribute('selected', '')
-            selBtn.innerHTML = Lang.queryJS('settings.authAccountSelect.selectedButton')
+            selBtn.textContent = Lang.queryJS('settings.authAccountSelect.selectedButton')
         } else {
             if(selBtn.hasAttribute('selected')){
                 selBtn.removeAttribute('selected')
             }
-            selBtn.innerHTML = Lang.queryJS('settings.authAccountSelect.selectButton')
+            selBtn.textContent = Lang.queryJS('settings.authAccountSelect.selectButton')
         }
     })
 }
@@ -661,51 +686,77 @@ const settingsCurrentMojangAccounts = document.getElementById('settingsCurrentMo
 function populateAuthAccounts(){
     const authAccounts = ConfigManager.getAuthAccounts()
     const authKeys = Object.keys(authAccounts)
-    if(authKeys.length === 0){
-        return
-    }
-    const selectedUUID = ConfigManager.getSelectedAccount().uuid
-
-    let microsoftAuthAccountStr = ''
-    let mojangAuthAccountStr = ''
+    const selectedUUID = ConfigManager.getSelectedAccount()?.uuid
+    const microsoftAccounts = document.createDocumentFragment()
+    const mojangAccounts = document.createDocumentFragment()
 
     authKeys.forEach((val) => {
         const acc = authAccounts[val]
+        const account = document.createElement('div')
+        account.className = 'settingsAuthAccount'
+        account.setAttribute('uuid', acc.uuid)
 
-        const accHtml = `<div class="settingsAuthAccount" uuid="${acc.uuid}">
-            <div class="settingsAuthAccountLeft">
-                <img class="settingsAuthAccountImage" alt="${acc.displayName}" src="https://mc-heads.net/body/${acc.uuid}/60">
-            </div>
-            <div class="settingsAuthAccountRight">
-                <div class="settingsAuthAccountDetails">
-                    <div class="settingsAuthAccountDetailPane">
-                        <div class="settingsAuthAccountDetailTitle">${Lang.queryJS('settings.authAccountPopulate.username')}</div>
-                        <div class="settingsAuthAccountDetailValue">${acc.displayName}</div>
-                    </div>
-                    <div class="settingsAuthAccountDetailPane">
-                        <div class="settingsAuthAccountDetailTitle">${Lang.queryJS('settings.authAccountPopulate.uuid')}</div>
-                        <div class="settingsAuthAccountDetailValue">${acc.uuid}</div>
-                    </div>
-                </div>
-                <div class="settingsAuthAccountActions">
-                    <button class="settingsAuthAccountSelect" ${selectedUUID === acc.uuid ? 'selected>' + Lang.queryJS('settings.authAccountPopulate.selectedAccount') : '>' + Lang.queryJS('settings.authAccountPopulate.selectAccount')}</button>
-                    <div class="settingsAuthAccountWrapper">
-                        <button class="settingsAuthAccountLogOut">${Lang.queryJS('settings.authAccountPopulate.logout')}</button>
-                    </div>
-                </div>
-            </div>
-        </div>`
+        const accountLeft = document.createElement('div')
+        accountLeft.className = 'settingsAuthAccountLeft'
+        const image = document.createElement('img')
+        image.className = 'settingsAuthAccountImage'
+        image.alt = acc.displayName
+        image.src = `https://mc-heads.net/body/${encodeURIComponent(acc.uuid)}/60`
+        image.onerror = () => {
+            image.onerror = null
+            image.src = 'assets/images/SealCircle.png'
+        }
+        accountLeft.appendChild(image)
 
-        if(acc.type === 'microsoft') {
-            microsoftAuthAccountStr += accHtml
+        const accountRight = document.createElement('div')
+        accountRight.className = 'settingsAuthAccountRight'
+        const details = document.createElement('div')
+        details.className = 'settingsAuthAccountDetails'
+        for(const [title, value] of [
+            [Lang.queryJS('settings.authAccountPopulate.username'), acc.displayName],
+            [Lang.queryJS('settings.authAccountPopulate.uuid'), acc.uuid]
+        ]){
+            const pane = document.createElement('div')
+            pane.className = 'settingsAuthAccountDetailPane'
+            const detailTitle = document.createElement('div')
+            detailTitle.className = 'settingsAuthAccountDetailTitle'
+            detailTitle.textContent = title
+            const detailValue = document.createElement('div')
+            detailValue.className = 'settingsAuthAccountDetailValue'
+            detailValue.textContent = value
+            pane.append(detailTitle, detailValue)
+            details.appendChild(pane)
+        }
+
+        const actions = document.createElement('div')
+        actions.className = 'settingsAuthAccountActions'
+        const select = document.createElement('button')
+        select.type = 'button'
+        select.className = 'settingsAuthAccountSelect'
+        const selected = selectedUUID === acc.uuid
+        select.toggleAttribute('selected', selected)
+        select.textContent = Lang.queryJS(`settings.authAccountPopulate.${selected ? 'selectedAccount' : 'selectAccount'}`)
+        const logoutWrapper = document.createElement('div')
+        logoutWrapper.className = 'settingsAuthAccountWrapper'
+        const logout = document.createElement('button')
+        logout.type = 'button'
+        logout.className = 'settingsAuthAccountLogOut'
+        logout.textContent = Lang.queryJS('settings.authAccountPopulate.logout')
+        logoutWrapper.appendChild(logout)
+        actions.append(select, logoutWrapper)
+        accountRight.append(details, actions)
+        account.append(accountLeft, accountRight)
+
+        if(acc.type === 'microsoft'){
+            microsoftAccounts.appendChild(account)
         } else {
-            mojangAuthAccountStr += accHtml
+            mojangAccounts.appendChild(account)
         }
 
     })
 
-    settingsCurrentMicrosoftAccounts.innerHTML = microsoftAuthAccountStr
-    settingsCurrentMojangAccounts.innerHTML = mojangAuthAccountStr
+    settingsCurrentMicrosoftAccounts.replaceChildren(microsoftAccounts)
+    settingsCurrentMojangAccounts.replaceChildren(mojangAccounts)
 }
 
 /**

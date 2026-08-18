@@ -220,14 +220,29 @@ function setAccountListingHandlers(){
 function populateAccountListings(){
     const accountsObj = ConfigManager.getAuthAccounts()
     const accounts = Array.from(Object.keys(accountsObj), v=>accountsObj[v])
-    let htmlString = ''
+    const selectedUUID = ConfigManager.getSelectedAccount()?.uuid
+    const fragment = document.createDocumentFragment()
     for(let i=0; i<accounts.length; i++){
-        htmlString += `<button class="accountListing" uuid="${accounts[i].uuid}" ${i===0 ? 'selected' : ''}>
-            <img src="https://mc-heads.net/head/${accounts[i].uuid}/40">
-            <div class="accountListingName">${accounts[i].displayName}</div>
-        </button>`
+        const account = accounts[i]
+        const listing = document.createElement('button')
+        listing.type = 'button'
+        listing.className = 'accountListing'
+        listing.setAttribute('uuid', account.uuid)
+        listing.toggleAttribute('selected', account.uuid === selectedUUID || (selectedUUID == null && i === 0))
+        const image = document.createElement('img')
+        image.alt = ''
+        image.src = `https://mc-heads.net/head/${encodeURIComponent(account.uuid)}/40`
+        image.onerror = () => {
+            image.onerror = null
+            image.src = 'assets/images/SealCircle.png'
+        }
+        const name = document.createElement('div')
+        name.className = 'accountListingName'
+        name.textContent = account.displayName
+        listing.append(image, name)
+        fragment.appendChild(listing)
     }
-    document.getElementById('accountSelectListScrollable').innerHTML = htmlString
+    document.getElementById('accountSelectListScrollable').replaceChildren(fragment)
 
 }
 

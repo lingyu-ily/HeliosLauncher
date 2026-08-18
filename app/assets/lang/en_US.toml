@@ -2,6 +2,11 @@
 updateAvailableTooltip = "Update Available"
 usernamePlaceholder = "Username"
 usernameEditButton = "Edit"
+accountMenuLabel = "Account menu"
+accountListLabel = "Signed-in accounts"
+accountMenuEmpty = "No accounts are signed in"
+accountMenuLogout = "Log out of current account"
+accountMenuManage = "View all accounts"
 settingsTooltip = "Settings"
 serverStatus = "SERVER"
 serverStatusPlaceholder = "OFFLINE"
@@ -214,6 +219,9 @@ noAccountType = "Sign in to play"
 microsoft = "Microsoft account"
 mojang = "Mojang account"
 
+[js.landing.accountMenu]
+current = "Current account"
+
 [js.landing.selectedServer]
 noSelection = "No Server Selected"
 loading = "Loading.."
@@ -334,13 +342,17 @@ okButton = "OK"
 
 [js.settings.authAccountSelect]
 selectButton = "Select Account"
-selectedButton = "Selected Account &#10004;"
+selectedButton = "Selected Account ✓"
 
 [js.settings.authAccountLogout]
+confirmTitle = "Log Out of This Account?"
+confirmMessage = "This account will be removed from the launcher. Are you sure you want to continue?"
 lastAccountWarningTitle = "Warning<br>This is Your Last Account"
 lastAccountWarningMessage = "In order to use the launcher you must be logged into at least one account. You will need to login again after.<br><br>Are you sure you want to log out?"
 confirmButton = "I'm Sure"
 cancelButton = "Cancel"
+errorTitle = "Unable to Log Out"
+errorMessage = "The account could not be logged out. Please try again."
 
 [js.settings.authAccountPopulate]
 username = "Username"

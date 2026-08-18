@@ -41,6 +41,13 @@ const server_selection_button = document.getElementById('server_selection_button
 const user_text               = document.getElementById('user_text')
 const launchAccountName       = document.getElementById('launchAccountName')
 const accountTypeText         = document.getElementById('accountTypeText')
+const avatarOverlay           = document.getElementById('avatarOverlay')
+const avatarContainer         = document.getElementById('avatarContainer')
+const accountMenu             = document.getElementById('accountMenu')
+const accountMenuList         = document.getElementById('accountMenuList')
+const accountMenuEmpty        = document.getElementById('accountMenuEmpty')
+const accountMenuLogout       = document.getElementById('accountMenuLogout')
+const accountMenuManage       = document.getElementById('accountMenuManage')
 const serverSidebarList       = document.getElementById('serverSidebarList')
 const selectedServerIcon      = document.getElementById('selectedServerIcon')
 const selectedServerName      = document.getElementById('selectedServerName')
@@ -178,8 +185,207 @@ document.getElementById('settingsMediaButton').onclick = async e => {
     switchView(getCurrentView(), VIEWS.settings)
 }
 
-// Bind avatar overlay button.
-document.getElementById('avatarOverlay').onclick = async e => {
+const defaultAccountAvatar = 'assets/images/SealCircle.png'
+let accountMenuCloseTimer = null
+let accountAvatarRequestSequence = 0
+
+function getAccountTypeLabel(authUser){
+    return authUser?.type === 'microsoft'
+        ? Lang.queryJS('landing.selectedAccount.microsoft')
+        : Lang.queryJS('landing.selectedAccount.mojang')
+}
+
+function getAccountMenuItems(){
+    const accounts = Object.values(ConfigManager.getAuthAccounts())
+    const selectedUUID = ConfigManager.getSelectedAccount()?.uuid
+    if(selectedUUID == null){
+        return accounts
+    }
+    return [
+        ...accounts.filter(account => account.uuid === selectedUUID),
+        ...accounts.filter(account => account.uuid !== selectedUUID)
+    ]
+}
+
+function renderAccountMenu(){
+    const accounts = getAccountMenuItems()
+    const selectedUUID = ConfigManager.getSelectedAccount()?.uuid
+    const fragment = document.createDocumentFragment()
+
+    for(const account of accounts){
+        const selected = account.uuid === selectedUUID
+        const type = getAccountTypeLabel(account)
+        const item = document.createElement('button')
+        item.type = 'button'
+        item.className = 'accountMenuAccount'
+        item.setAttribute('role', 'menuitemradio')
+        item.setAttribute('aria-checked', selected.toString())
+        item.setAttribute('data-account-uuid', account.uuid)
+        item.setAttribute('aria-label', selected
+            ? `${account.displayName}, ${type}, ${Lang.queryJS('landing.accountMenu.current')}`
+            : `${account.displayName}, ${type}`)
+
+        const avatar = document.createElement('img')
+        avatar.className = 'accountMenuAvatar'
+        avatar.alt = ''
+        avatar.src = `https://mc-heads.net/head/${encodeURIComponent(account.uuid)}/40`
+        avatar.onerror = () => {
+            avatar.onerror = null
+            avatar.src = defaultAccountAvatar
+        }
+
+        const copy = document.createElement('span')
+        copy.className = 'accountMenuCopy'
+        const name = document.createElement('span')
+        name.className = 'accountMenuName'
+        name.textContent = account.displayName
+        const accountType = document.createElement('span')
+        accountType.className = 'accountMenuType'
+        accountType.textContent = type
+        copy.append(name, accountType)
+
+        const check = document.createElement('span')
+        check.className = 'accountMenuCheck'
+        check.setAttribute('aria-hidden', 'true')
+        check.textContent = selected ? '✓' : ''
+        item.append(avatar, copy, check)
+        item.onclick = () => {
+            if(account.uuid !== ConfigManager.getSelectedAccount()?.uuid){
+                setSelectedAccount(account.uuid)
+                if(typeof refreshAuthAccountSelected === 'function'){
+                    refreshAuthAccountSelected(account.uuid)
+                }
+            }
+            closeAccountMenu(true)
+        }
+        fragment.appendChild(item)
+    }
+
+    accountMenuList.replaceChildren(fragment)
+    accountMenuEmpty.hidden = accounts.length > 0
+    accountMenuLogout.hidden = selectedUUID == null
+}
+
+function isAccountMenuOpen(){
+    return avatarOverlay.getAttribute('aria-expanded') === 'true'
+}
+
+function openAccountMenu(focusLast = false){
+    clearTimeout(accountMenuCloseTimer)
+    renderAccountMenu()
+    accountMenu.hidden = false
+    accountMenu.setAttribute('aria-hidden', 'false')
+    avatarOverlay.setAttribute('aria-expanded', 'true')
+    requestAnimationFrame(() => {
+        accountMenu.setAttribute('open', '')
+        const items = getAccountMenuFocusableItems()
+        const selected = accountMenu.querySelector('.accountMenuAccount[aria-checked="true"]')
+        const focusTarget = focusLast ? items.at(-1) : selected ?? items[0]
+        focusTarget?.focus()
+    })
+}
+
+function closeAccountMenu(returnFocus = false){
+    if(!isAccountMenuOpen()){
+        return
+    }
+    clearTimeout(accountMenuCloseTimer)
+    accountMenu.removeAttribute('open')
+    accountMenu.setAttribute('aria-hidden', 'true')
+    avatarOverlay.setAttribute('aria-expanded', 'false')
+    const finish = () => {
+        accountMenu.hidden = true
+    }
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+        finish()
+    } else {
+        accountMenuCloseTimer = setTimeout(finish, 180)
+    }
+    if(returnFocus){
+        avatarOverlay.focus()
+    }
+}
+
+function getAccountMenuFocusableItems(){
+    return Array.from(accountMenu.querySelectorAll('[role="menuitemradio"], [role="menuitem"]'))
+        .filter(item => !item.hidden && !item.disabled)
+}
+
+avatarOverlay.onclick = () => {
+    if(isAccountMenuOpen()){
+        closeAccountMenu(true)
+    } else {
+        openAccountMenu()
+    }
+}
+
+avatarOverlay.addEventListener('keydown', event => {
+    if(event.key !== 'ArrowDown' && event.key !== 'ArrowUp'){
+        return
+    }
+    event.preventDefault()
+    if(!isAccountMenuOpen()){
+        openAccountMenu(event.key === 'ArrowUp')
+    }
+})
+
+accountMenu.addEventListener('keydown', event => {
+    if(event.key === 'Escape'){
+        event.preventDefault()
+        closeAccountMenu(true)
+        return
+    }
+    if(event.key === 'Tab'){
+        closeAccountMenu(false)
+        return
+    }
+    if(!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)){
+        return
+    }
+    const items = getAccountMenuFocusableItems()
+    if(items.length === 0){
+        return
+    }
+    event.preventDefault()
+    const currentIndex = Math.max(0, items.indexOf(document.activeElement))
+    let nextIndex
+    if(event.key === 'Home'){
+        nextIndex = 0
+    } else if(event.key === 'End'){
+        nextIndex = items.length - 1
+    } else {
+        const offset = event.key === 'ArrowDown' ? 1 : -1
+        nextIndex = (currentIndex + offset + items.length) % items.length
+    }
+    items[nextIndex].focus()
+})
+
+document.addEventListener('pointerdown', event => {
+    if(isAccountMenuOpen() && !document.getElementById('user_content').contains(event.target)){
+        closeAccountMenu(false)
+    }
+})
+
+document.addEventListener('focusin', event => {
+    if(isAccountMenuOpen() && !document.getElementById('user_content').contains(event.target)){
+        closeAccountMenu(false)
+    }
+})
+
+window.addEventListener('blur', () => closeAccountMenu(false))
+
+accountMenuLogout.onclick = () => {
+    const selectedAccount = ConfigManager.getSelectedAccount()
+    if(selectedAccount == null){
+        return
+    }
+    const returnView = getCurrentView()
+    closeAccountMenu(false)
+    requestAuthAccountLogout(selectedAccount.uuid, returnView)
+}
+
+accountMenuManage.onclick = async () => {
+    closeAccountMenu(false)
     if(getCurrentView() === VIEWS.settings){
         settingsNavItemListener(document.getElementById('settingsNavAccount'))
         return
@@ -192,22 +398,35 @@ document.getElementById('avatarOverlay').onclick = async e => {
 
 // Bind selected account
 function updateSelectedAccount(authUser){
+    const avatarRequestSequence = ++accountAvatarRequestSequence
     let username = Lang.queryJS('landing.selectedAccount.noAccountSelected')
     let accountType = Lang.queryJS('landing.selectedAccount.noAccountType')
+    avatarContainer.style.backgroundImage = ''
     if(authUser != null){
         if(authUser.displayName != null){
             username = authUser.displayName
         }
-        accountType = authUser.type === 'microsoft'
-            ? Lang.queryJS('landing.selectedAccount.microsoft')
-            : Lang.queryJS('landing.selectedAccount.mojang')
+        accountType = getAccountTypeLabel(authUser)
         if(authUser.uuid != null){
-            document.getElementById('avatarContainer').style.backgroundImage = `url('https://mc-heads.net/head/${authUser.uuid}/64')`
+            const avatarURL = `https://mc-heads.net/head/${encodeURIComponent(authUser.uuid)}/64`
+            const avatarImage = new Image()
+            avatarImage.onload = () => {
+                if(avatarRequestSequence === accountAvatarRequestSequence){
+                    avatarContainer.style.backgroundImage = `url('${avatarURL}')`
+                }
+            }
+            avatarImage.onerror = () => {
+                if(avatarRequestSequence === accountAvatarRequestSequence){
+                    avatarContainer.style.backgroundImage = ''
+                }
+            }
+            avatarImage.src = avatarURL
         }
     }
-    user_text.innerHTML = username
-    launchAccountName.innerHTML = username
-    accountTypeText.innerHTML = accountType
+    user_text.textContent = username
+    launchAccountName.textContent = username
+    accountTypeText.textContent = accountType
+    renderAccountMenu()
 }
 updateSelectedAccount(ConfigManager.getSelectedAccount())
 
@@ -290,6 +509,9 @@ function renderServerSidebar(distro){
             }
             if(ConfigManager.getSelectedServer() === server.id){
                 item.focus()
+                return
+            }
+            if(!setLandingSection('play')){
                 return
             }
             if(updateSelectedServer(serv) === false){

@@ -1,6 +1,6 @@
 <aside id="launcherSidebar">
     <div id="user_content">
-        <button id="avatarOverlay" type="button" aria-label="<%- lang('landing.usernameEditButton') %>">
+        <button id="avatarOverlay" type="button" aria-label="<%- lang('landing.usernameEditButton') %>" aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu">
             <span id="avatarContainer" aria-hidden="true"></span>
             <span class="sidebarAccountCopy">
                 <span id="user_text"><%- lang('landing.usernamePlaceholder') %></span>
@@ -8,6 +8,24 @@
             </span>
             <span class="sidebarChevron" aria-hidden="true">⌄</span>
         </button>
+        <div id="accountMenu" role="menu" aria-label="<%- lang('landing.accountMenuLabel') %>" aria-hidden="true" hidden>
+            <div id="accountMenuList" role="group" aria-label="<%- lang('landing.accountListLabel') %>"></div>
+            <div id="accountMenuEmpty" role="status" hidden><%- lang('landing.accountMenuEmpty') %></div>
+            <div id="accountMenuActions">
+                <button id="accountMenuLogout" class="accountMenuAction accountMenuDanger" type="button" role="menuitem">
+                    <svg viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="M8 3H4v14h4M12 6l4 4-4 4M16 10H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter"/>
+                    </svg>
+                    <span><%- lang('landing.accountMenuLogout') %></span>
+                </button>
+                <button id="accountMenuManage" class="accountMenuAction" type="button" role="menuitem">
+                    <svg viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="M3 4h14v12H3zM6 8h2M6 12h2M11 8h3M11 12h3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <span><%- lang('landing.accountMenuManage') %></span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <button id="landingHomeButton" class="sidebarNavButton" type="button" selected>

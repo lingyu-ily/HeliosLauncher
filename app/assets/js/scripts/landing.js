@@ -45,22 +45,19 @@ const serverSidebarList       = document.getElementById('serverSidebarList')
 const selectedServerIcon      = document.getElementById('selectedServerIcon')
 const selectedServerName      = document.getElementById('selectedServerName')
 const selectedServerVersion   = document.getElementById('selectedServerVersion')
+const launcherGameEyebrow     = document.getElementById('launcherGameEyebrow')
 const launcherHero            = document.getElementById('launcherHero')
 const launcherHeroLogo        = document.getElementById('image_seal')
-const launcherHeroEyebrow     = document.getElementById('launcherHeroEyebrow')
 const launcherHeroWordmark    = document.getElementById('launcherHeroWordmark')
 const launcherHeroTagline     = document.getElementById('launcherHeroTagline')
-const newsPreviewEyebrow      = document.getElementById('newsPreviewEyebrow')
 const newsPreviewTitle        = document.getElementById('newsPreviewTitle')
-const newsViewEyebrow         = document.getElementById('newsViewEyebrow')
 
 const defaultServerPresentation = {
     background: launcherHero.dataset.defaultBackground,
     logo: launcherHeroLogo.getAttribute('src'),
-    eyebrow: launcherHeroEyebrow.textContent,
+    eyebrow: launcherGameEyebrow.textContent,
     title: launcherHeroWordmark.textContent,
     tagline: launcherHeroTagline.textContent,
-    newsEyebrow: newsPreviewEyebrow.textContent,
     newsTitle: newsPreviewTitle.textContent
 }
 let heroPresentationSequence = 0
@@ -359,20 +356,22 @@ async function applyServerPresentation(serv){
     const requestSequence = ++heroPresentationSequence
     const rawServer = serv?.rawServer
     const hero = rawServer?.ui?.hero || {}
+    const eyebrow = typeof hero.eyebrow === 'string' && hero.eyebrow.trim()
+        ? hero.eyebrow.trim()
+        : defaultServerPresentation.eyebrow
     const presentation = {
         background: hero.background || defaultServerPresentation.background,
         logo: hero.logo || defaultServerPresentation.logo,
-        eyebrow: hero.eyebrow || defaultServerPresentation.eyebrow,
+        eyebrow,
         title: hero.title || defaultServerPresentation.title,
         tagline: hero.tagline || defaultServerPresentation.tagline
     }
 
-    launcherHeroEyebrow.textContent = presentation.eyebrow
+    launcherGameEyebrow.textContent = presentation.eyebrow
+    launcherGameEyebrow.title = presentation.eyebrow
     launcherHeroWordmark.textContent = presentation.title
     launcherHeroTagline.textContent = presentation.tagline
-    newsPreviewEyebrow.textContent = presentation.eyebrow || defaultServerPresentation.newsEyebrow
     newsPreviewTitle.textContent = presentation.title || defaultServerPresentation.newsTitle
-    newsViewEyebrow.textContent = presentation.eyebrow || defaultServerPresentation.title
 
     const [background, logo] = await Promise.all([
         preloadHeroAsset(presentation.background, defaultServerPresentation.background),

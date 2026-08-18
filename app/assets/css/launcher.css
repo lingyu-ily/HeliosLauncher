@@ -4189,6 +4189,15 @@ button:disabled {
     letter-spacing: 0.8px;
 }
 
+#launcherGameEyebrow {
+    align-self: flex-start;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 #launcherGameTabs {
     height: 42px;
     display: flex;
@@ -4267,21 +4276,6 @@ button:disabled {
     margin: -10px 0 0;
     border-radius: 0;
     filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
-}
-
-#launcherHeroEyebrow {
-    max-width: min(80vw, 620px);
-    margin-bottom: 7px;
-    overflow: hidden;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 750;
-    letter-spacing: 2.2px;
-    text-align: center;
-    text-overflow: ellipsis;
-    text-shadow: 0 2px 6px #000;
-    text-transform: uppercase;
-    white-space: nowrap;
 }
 
 #image_seal {

@@ -397,7 +397,11 @@ function updateSelectedServer(serv){
     if(getLandingSection() === 'mods' && !commitLandingModsView()){
         return false
     }
+    if(getLandingSection() === 'java' && !commitLandingJavaView()){
+        return false
+    }
     invalidateLandingModsView()
+    invalidateLandingJavaView()
     if(getCurrentView() === VIEWS.settings){
         fullSettingsSave()
     }
@@ -416,14 +420,14 @@ function updateSelectedServer(serv){
         selectedServerIcon.alt = ''
         updateServerSidebarSelection('')
     }
-    if(getCurrentView() === VIEWS.settings){
-        animateSettingsTabRefresh()
-    }
     setLaunchEnabled(serv != null)
     void applyServerPresentation(serv)
     void initNews()
     if(getCurrentView() === VIEWS.landing && getLandingSection() === 'mods'){
         void prepareLandingModsView()
+    }
+    if(getCurrentView() === VIEWS.landing && getLandingSection() === 'java'){
+        void prepareLandingJavaView()
     }
     return true
 }
@@ -568,7 +572,9 @@ function showLaunchFailure(title, desc){
  * 
  * @param {boolean} launchAfter Whether we should begin to launch after scanning. 
  */
-async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
+async function asyncSystemScan(effectiveJavaOptions, launchAfter = true, serverId = ConfigManager.getSelectedServer()){
+
+    const scanServerId = serverId
 
     setLaunchDetails(Lang.queryJS('landing.systemScan.checking'))
     toggleLaunchArea(true)
@@ -593,7 +599,7 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
             toggleOverlay(false)
             
             try {
-                downloadJava(effectiveJavaOptions, launchAfter)
+                downloadJava(effectiveJavaOptions, launchAfter, scanServerId)
             } catch(err) {
                 loggerLanding.error('Unhandled error in Java Download', err)
                 showLaunchFailure(Lang.queryJS('landing.systemScan.javaDownloadFailureTitle'), Lang.queryJS('landing.systemScan.javaDownloadFailureText'))
@@ -615,7 +621,7 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
                 setDismissHandler(() => {
                     toggleOverlay(false, true)
 
-                    asyncSystemScan(effectiveJavaOptions, launchAfter)
+                    asyncSystemScan(effectiveJavaOptions, launchAfter, scanServerId)
                 })
                 $('#overlayContent').fadeIn(250)
             })
@@ -624,24 +630,23 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
     } else {
         // Java installation found, use this to launch the game.
         const javaExec = javaExecFromRoot(jvmDetails.path)
-        ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), javaExec)
+        ConfigManager.setJavaExecutable(scanServerId, javaExec)
         ConfigManager.save()
 
-        // We need to make sure that the updated value is on the settings UI.
-        // Just incase the settings UI is already open.
-        settingsJavaExecVal.value = javaExec
-        await populateJavaExecDetails(settingsJavaExecVal.value)
+        await syncLandingJavaExecutable(scanServerId, javaExec)
 
         // TODO Callback hell, refactor
         // TODO Move this out, separate concerns.
-        if(launchAfter){
+        if(launchAfter && ConfigManager.getSelectedServer() === scanServerId){
             await dlAsync()
+        } else if(launchAfter){
+            toggleLaunchArea(false)
         }
     }
 
 }
 
-async function downloadJava(effectiveJavaOptions, launchAfter = true) {
+async function downloadJava(effectiveJavaOptions, launchAfter = true, serverId = ConfigManager.getSelectedServer()) {
 
     // TODO Error handling.
     // asset can be null.
@@ -693,15 +698,16 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
     remote.getCurrentWindow().setProgressBar(-1)
 
     // Extraction completed successfully.
-    ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), newJavaExec)
+    ConfigManager.setJavaExecutable(serverId, newJavaExec)
     ConfigManager.save()
+    await syncLandingJavaExecutable(serverId, newJavaExec)
 
     clearInterval(extractListener)
     setLaunchDetails(Lang.queryJS('landing.downloadJava.javaInstalled'))
 
     // TODO Callback hell
     // Refactor the launch functions
-    asyncSystemScan(effectiveJavaOptions, launchAfter)
+    asyncSystemScan(effectiveJavaOptions, launchAfter, serverId)
 
 }
 
@@ -928,21 +934,26 @@ function getLandingSection(){
 }
 
 function setLandingSection(section){
-    if(!['play', 'mods', 'updates'].includes(section)){
+    if(!['play', 'mods', 'java', 'updates'].includes(section)){
         return false
     }
     if(activeLandingSection === 'mods' && section !== 'mods' && !commitLandingModsView()){
+        return false
+    }
+    if(activeLandingSection === 'java' && section !== 'java' && !commitLandingJavaView()){
         return false
     }
 
     const sections = {
         play: document.getElementById('landingPlayView'),
         mods: document.getElementById('landingModsView'),
+        java: document.getElementById('landingJavaView'),
         updates: document.getElementById('newsContainer')
     }
     const tabs = {
         play: document.getElementById('landingPlayButton'),
         mods: document.getElementById('landingModsButton'),
+        java: document.getElementById('landingJavaButton'),
         updates: document.getElementById('landingUpdatesButton')
     }
     const workspaceScroll = document.getElementById('landingWorkspaceScroll')
@@ -967,6 +978,9 @@ function setLandingSection(section){
     if(section === 'mods'){
         void prepareLandingModsView()
     }
+    if(section === 'java'){
+        void prepareLandingJavaView()
+    }
     if(showUpdates && newsAlertShown){
         $('#newsButtonAlert').fadeOut(200)
         newsAlertShown = false
@@ -988,6 +1002,7 @@ function openLandingSection(section){
 
 document.getElementById('landingPlayButton').onclick = () => openLandingSection('play')
 document.getElementById('landingModsButton').onclick = () => openLandingSection('mods')
+document.getElementById('landingJavaButton').onclick = () => openLandingSection('java')
 document.getElementById('landingHomeButton').onclick = () => openLandingSection('play')
 document.getElementById('landingUpdatesButton').onclick = () => openLandingSection('updates')
 document.getElementById('newsButton').onclick = () => openLandingSection('updates')
@@ -1002,6 +1017,7 @@ document.getElementById('launcherGameTabs').addEventListener('keydown', event =>
     const tabs = [
         document.getElementById('landingPlayButton'),
         document.getElementById('landingModsButton'),
+        document.getElementById('landingJavaButton'),
         document.getElementById('landingUpdatesButton')
     ]
     const currentIndex = Math.max(0, tabs.indexOf(document.activeElement))

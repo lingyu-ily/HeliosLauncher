@@ -1814,19 +1814,19 @@ input:checked + .toggleSwitchSlider:before {
 * * */
 
 /* Style links on the Java tab. */
-#settingsTabJava a,
+#landingJavaView a,
 .settingsChangelogText a {
     color: rgba(202, 202, 202, 0.75);
     transition: 0.25s ease;
     outline: none;
 }
-#settingsTabJava a:hover,
-#settingsTabJava a:focus,
+#landingJavaView a:hover,
+#landingJavaView a:focus,
 .settingsChangelogText a:hover,
 .settingsChangelogText a:focus {
     color: rgba(255, 255, 255, 0.75);
 }
-#settingsTabJava a:active,
+#landingJavaView a:active,
 .settingsChangelogText a:active {
     color: rgba(165, 165, 165, 0.75);
 }
@@ -4247,6 +4247,10 @@ button:disabled {
     animation: landingSectionEnter 200ms ease;
 }
 
+.landingSectionView[hidden] {
+    display: none !important;
+}
+
 @keyframes landingSectionEnter {
     from {
         opacity: 0;
@@ -4418,6 +4422,308 @@ button:disabled {
     width: 100%;
     box-sizing: border-box;
     text-align: left;
+}
+
+#landingJavaView {
+    --mc-settings-accent: #3f972c;
+    min-height: 100%;
+    box-sizing: border-box;
+    padding: 36px 48px 72px;
+    background: #121212;
+    color: var(--mc-text);
+}
+
+#landingJavaHeader,
+#landingJavaStatus,
+#landingJavaContent {
+    width: min(100%, 960px);
+}
+
+#landingJavaHeader {
+    margin-bottom: 28px;
+}
+
+#landingJavaHeader h1 {
+    margin: 0 0 7px;
+    color: #fff;
+    font-size: 22px;
+}
+
+#landingJavaHeader p {
+    margin: 0;
+    color: var(--mc-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+#landingJavaStatus {
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    box-sizing: border-box;
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    border: 1px solid #393633;
+    background: #1b1a19;
+    color: #d2cdc7;
+}
+
+#landingJavaStatus[hidden],
+#landingJavaContent[hidden] {
+    display: none;
+}
+
+#landingJavaRetryButton {
+    min-height: 34px;
+    padding: 0 18px;
+    border: 1px solid #5d5752;
+    border-radius: 0;
+    background: #322f2c;
+    box-shadow: inset 0 -3px rgba(0, 0, 0, 0.28);
+    color: #fff;
+    cursor: pointer;
+}
+
+#landingJavaRetryButton:hover,
+#landingJavaRetryButton:focus-visible {
+    border-color: #837a73;
+    background: #403b37;
+}
+
+#landingJavaServer {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+    padding: 14px 16px;
+    border: 1px solid #393633;
+    background: #1b1a19;
+}
+
+#landingJavaServerIcon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+#landingJavaServerCopy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+#landingJavaServerLabel,
+#landingJavaServerVersion,
+#landingJavaServerHint {
+    color: var(--mc-muted);
+    font-size: 10px;
+}
+
+#landingJavaServerName,
+#landingJavaServerVersion {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#landingJavaServerName {
+    color: #fff;
+    font-size: 14px;
+}
+
+#landingJavaView .landingJavaPanel {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#landingJavaView #settingsMemoryContainer,
+#landingJavaView .settingsFileSelContainer,
+#landingJavaView #settingsJVMOptsContainer {
+    margin: 0 0 28px;
+    padding: 0 0 26px;
+    border-bottom: 1px solid #302e2c;
+}
+
+#landingJavaView #settingsMemoryTitle,
+#landingJavaView .settingsFileSelTitle,
+#landingJavaView #settingsJVMOptsTitle {
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 650;
+}
+
+#landingJavaView #settingsMemoryContent {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 34px;
+}
+
+#landingJavaView #settingsMemoryContentLeft,
+#landingJavaView #settingsMemoryContentRight {
+    width: auto;
+    min-width: 0;
+    margin: 0;
+}
+
+#landingJavaView #settingsMemoryContentRight {
+    justify-content: center;
+}
+
+#landingJavaView .settingsMemoryContentItem + .settingsMemoryContentItem {
+    margin-top: 18px;
+}
+
+#landingJavaView #settingsMemoryStatus {
+    width: 100%;
+    gap: 18px;
+    padding: 16px;
+    border: 1px solid #393633;
+    background: #1b1a19;
+}
+
+#landingJavaView #settingsMemoryStatus > .settingsMemoryStatusContainer:not(:last-child) {
+    margin-bottom: 0;
+}
+
+#landingJavaView #settingsMemoryDesc {
+    margin-bottom: 0;
+    line-height: 1.55;
+}
+
+#landingJavaView .rangeSlider {
+    height: 28px;
+    margin: 7px 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: none;
+}
+
+#landingJavaView .rangeSlider::before {
+    content: '';
+    position: absolute;
+    top: 11px;
+    right: 0;
+    left: 0;
+    height: 5px;
+    background: #615d58;
+}
+
+#landingJavaView .rangeSliderBar {
+    top: 11px;
+    z-index: 1;
+    height: 5px;
+    pointer-events: none;
+}
+
+#landingJavaView .rangeSliderTrack {
+    top: 3px;
+    z-index: 2;
+    width: 12px;
+    height: 22px;
+    box-sizing: border-box;
+    border: 2px solid #2d751f;
+    background: #f4f4f4;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+    pointer-events: none;
+}
+
+#landingJavaView .rangeSlider:hover::before {
+    background: #77716b;
+}
+
+#landingJavaView .rangeSlider:focus-visible {
+    outline: 2px solid var(--mc-focus);
+    outline-offset: 3px;
+}
+
+#landingJavaView .settingsFileSelContent,
+#landingJavaView .settingsFileSelActions,
+#landingJavaView #settingsJVMOptsContent {
+    width: 100%;
+    min-width: 0;
+}
+
+#landingJavaView .settingsFileSelActions,
+#landingJavaView #settingsJVMOptsContent {
+    display: flex;
+    align-items: stretch;
+    height: 46px;
+}
+
+.landingJavaIconDefinitions {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+#landingJavaView .settingsFileSelIcon {
+    width: 42px;
+    min-width: 42px;
+    min-height: 0;
+    height: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 1px solid #514c47;
+    border-right: 0;
+    border-radius: 0;
+    background: #23211f;
+}
+
+#landingJavaView .settingsFileSelSVG {
+    width: 20px;
+    height: 20px;
+    fill: #fff;
+}
+
+#landingJavaView .settingsFileSelVal,
+#landingJavaView #settingsJVMOptsVal {
+    min-width: 0;
+    height: 100%;
+    flex: 1;
+    box-sizing: border-box;
+    border: 1px solid #514c47;
+    border-radius: 0;
+    background: #171615;
+    color: #fff;
+}
+
+#landingJavaView #settingsJavaExecSel {
+    min-height: 0;
+    height: 100%;
+    border-left: 0;
+}
+
+#landingJavaView .settingsFileSelVal:disabled {
+    opacity: 1;
+    color: #c7c1bb;
+}
+
+#landingJavaView #settingsJVMOptsVal:focus {
+    outline: none;
+    border-color: var(--mc-settings-accent);
+}
+
+#landingJavaView #settingsJavaExecDetails {
+    min-height: 18px;
+    margin-bottom: 8px;
+}
+
+#landingJavaView .settingsFileSelDesc,
+#landingJavaView #settingsJVMOptsDesc {
+    margin-top: 10px;
+    color: var(--mc-muted);
+    font-size: 11px;
+    line-height: 1.55;
 }
 
 #launcherHero {

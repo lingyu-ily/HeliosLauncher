@@ -66,9 +66,16 @@ function syncLauncherShell(view){
  * fades in.
  */
 function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, onCurrentFade = () => {}, onNextFade = () => {}){
-    if(current === VIEWS.landing && next !== VIEWS.landing && typeof getLandingSection === 'function' && getLandingSection() === 'mods' && typeof commitLandingModsView === 'function'){
-        if(!commitLandingModsView()){
-            return false
+    if(current === VIEWS.landing && next !== VIEWS.landing && typeof getLandingSection === 'function'){
+        if(getLandingSection() === 'mods' && typeof commitLandingModsView === 'function'){
+            if(!commitLandingModsView()){
+                return false
+            }
+        }
+        if(getLandingSection() === 'java' && typeof commitLandingJavaView === 'function'){
+            if(!commitLandingJavaView()){
+                return false
+            }
         }
     }
     if(current === VIEWS.settings && next !== VIEWS.settings && typeof saveSettingsBeforeExit === 'function'){

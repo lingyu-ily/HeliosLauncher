@@ -1300,23 +1300,8 @@ input:checked + .toggleSwitchSlider:before {
 
 /* File selection button. */
 .settingsFileSelButton {
-    border: 0px;
-    border-radius: 0px 3px 3px 0px;
     font-size: 12px;
-    padding: 0px 5px;
-    cursor: pointer;
-    background: rgba(126, 126, 126, 0.57);
-    transition: 0.25s ease;
     white-space: nowrap;
-    outline: none;
-}
-.settingsFileSelButton:hover,
-.settingsFileSelButton:focus {
-    text-shadow: 0px 0px 20px white;
-}
-.settingsFileSelButton:active {
-    text-shadow: 0px 0px 20px rgba(255, 255, 255, 0.75);
-    color: rgba(255, 255, 255, 0.75);
 }
 
 /* Description for the file selector. */
@@ -1357,26 +1342,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Settings add account button styles. */
 .settingsAddAuthAccount {
-    background: none;
-    border: none;
     text-align: left;
-    padding: 2px 0px;
-    color: white;
-    cursor: pointer;
-    outline: none;
-    transition: 0.25s ease;
-}
-.settingsAddAuthAccount:hover,
-.settingsAddAuthAccount:focus {
-    text-shadow: 0px 0px 20px white, 0px 0px 20px white, 0px 0px 20px white;
-}
-.settingsAddAuthAccount:active {
-    text-shadow: 0px 0px 20px rgba(255, 255, 255, 0.75), 0px 0px 20px rgba(255, 255, 255, 0.75), 0px 0px 20px rgba(255, 255, 255, 0.75);
-    color: rgba(255, 255, 255, 0.75);
-}
-.settingsAddAuthAccount:disabled {
-    color: rgba(255, 255, 255, 0.75);
-    pointer-events: none;
 }
 
 /* Auth account list container styles. */
@@ -1454,17 +1420,8 @@ input:checked + .toggleSwitchSlider:before {
 /* Account select button shared styles. */
 .settingsAuthAccountSelect {
     opacity: 0;
-    border: none;
     white-space: nowrap;
-    background: none;
-    font-family: 'Avenir Medium';
-    outline: none;
-    transition: 0.25s ease;
-}
-.settingsAuthAccountSelect:hover:not([selected]),
-.settingsAuthAccountSelect:focus:not([selected]) {
-    text-shadow: 0px 0px 20px white, 0px 0px 20px white;
-    cursor: pointer;
+    transition: opacity 120ms ease;
 }
 .settingsAuthAccount:hover .settingsAuthAccountSelect:not([selected]),
 .settingsAuthAccountSelect[selected] {
@@ -1477,26 +1434,7 @@ input:checked + .toggleSwitchSlider:before {
 /* Account logout button shared styles. */
 .settingsAuthAccountLogOut {
     opacity: 0;
-    border: 1px solid rgb(241, 55, 55);
-    color: rgb(241, 55, 55);
-    background: none;
-    font-size: 12px;
-    border-radius: 3px;
-    font-family: 'Avenir Medium';
-    transition: 0.25s ease;
-    cursor: pointer;
-    outline: none;
-}
-.settingsAuthAccountLogOut:hover,
-.settingsAuthAccountLogOut:focus {
-    box-shadow: 0px 0px 20px rgb(241, 55, 55);
-    background: rgba(241, 55, 55, 0.25);
-}
-.settingsAuthAccountLogOut:active {
-    box-shadow: 0px 0px 20px rgb(185, 47, 47);
-    background: rgba(185, 47, 47, 0.25);
-    border: 1px solid rgb(185, 47, 47);
-    color: rgb(185, 47, 47);
+    transition: opacity 120ms ease;
 }
 .settingsAuthAccount:hover .settingsAuthAccountLogOut {
     opacity: 1;
@@ -1644,23 +1582,11 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Button to open the mods folder for drop-in mods. */
 #settingsDropinFileSystemButton {
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid rgba(126, 126, 126, 0.57);
-    border-radius: 3px;
     height: 50px;
     width: 100%;
     text-align: left;
     padding: 0px 50px;
-    cursor: pointer;
-    outline: none;
-    transition: 0.25s ease;
     margin-bottom: 10px;
-}
-#settingsDropinFileSystemButton:hover,
-#settingsDropinFileSystemButton:focus,
-#settingsDropinFileSystemButton[drag] {
-    background: rgba(54, 54, 54, 0.25);
-    text-shadow: 0px 0px 20px white;
 }
 /* Refresh instructions on the file system button. */
 #settingsDropinRefreshNote {
@@ -1670,24 +1596,9 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Button to remove drop-in mods. */
 .settingsDropinRemoveButton {
-    background: none;
-    border: none;
     font-size: 10px;
     text-align: left;
-    padding: 0px;
-    color: #c32625;
     font-weight: bold;
-    cursor: pointer;
-    outline: none;
-    transition: 0.25s ease;
-}
-.settingsDropinRemoveButton:hover,
-.settingsDropinRemoveButton:focus {
-    text-shadow: 0px 0px 20px #c32625, 0px 0px 20px #c32625, 0px 0px 20px #c32625;
-}
-.settingsDropinRemoveButton:active {
-    color: #9b1f1f;
-    text-shadow: 0px 0px 20px #9b1f1f, 0px 0px 20px #9b1f1f, 0px 0px 20px #9b1f1f;
 }
 
 /* Shaderpack settings description. */
@@ -1706,21 +1617,8 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Button to add shaderpacks. */
 #settingsShaderpackButton {
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid rgba(126, 126, 126, 0.57);
-    border-radius: 3px;
-    cursor: pointer;
-    outline: none;
-    transition: 0.25s ease;
     font-size: 14px;
-    padding: 6px 11px;
     margin-right: 5px;
-}
-#settingsShaderpackButton:hover,
-#settingsShaderpackButton:focus,
-#settingsShaderpackButton[drag] {
-    background: rgba(54, 54, 54, 0.25);
-    text-shadow: 0px 0px 20px white;
 }
 
 /* Main select container. */
@@ -2052,25 +1950,14 @@ input:checked + .toggleSwitchSlider:before {
 /* About information links. */
 #settingsAboutButtons {
     display: flex;
-    padding: 0px 15px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0;
     margin-bottom: 5px;
 }
 .settingsAboutButton {
-    background: none;
-    border: none;
     font-size: 10px;
-    color: grey;
-    padding: 0px 5px;
-    transition: 0.25s ease;
-    outline: none;
     text-decoration: none;
-}
-.settingsAboutButton:hover,
-.settingsAboutButton:focus {
-    color: rgb(165, 165, 165);
-}
-.settingsAboutButton:active {
-    color: rgba(124, 124, 124, 0.75);
 }
 
 /* Main changelog container. */
@@ -2253,32 +2140,6 @@ input:checked + .toggleSwitchSlider:before {
     padding-top: 10px;
     font-size: 14px;
     font-weight: bold;
-}
-
-/* Update action button styles. */
-#settingsUpdateActionButton {
-    display: flex;
-    flex-direction: column;
-    padding-left: 10px;
-    background: none;
-    border: none;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    outline: none;
-    text-align: left;
-    transition: 0.25s ease;
-}
-#settingsUpdateActionButton:hover,
-#settingsUpdateActionButton:focus {
-    text-shadow: 0px 0px 20px white, 0px 0px 20px white, 0px 0px 20px white;
-}
-#settingsUpdateActionButton:active {
-    text-shadow: 0px 0px 20px #c7c7c7, 0px 0px 20px #c7c7c7, 0px 0px 20px #c7c7c7;
-    color: #c7c7c7;
-}
-#settingsUpdateActionButton:disabled {
-    pointer-events: none;
 }
 
 /*******************************************************************************
@@ -2666,25 +2527,6 @@ input:checked + .toggleSwitchSlider:before {
 #nELoadSpan {
     white-space: pre;
 }
-/* News error retry button styles. */
-#newsErrorRetry {
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    background: none;
-    border: none;
-    outline: none;
-    transition: 0.25s ease;
-}
-#newsErrorRetry:focus,
-#newsErrorRetry:hover {
-    text-shadow: 0px 0px 20px white;
-}
-#newsErrorRetry:active {
-    color: #c7c7c7;
-    text-shadow: 0px 0px 20px #c7c7c7;
-}
-
 /*******************************************************************************
  *                                                                             *
  * Landing View (Top Styles)                                                   *
@@ -3140,36 +2982,6 @@ input:checked + .toggleSwitchSlider:before {
 * Landing View (Bottom Styles) | Center Content
 * * */
 
-/* Button which opens the news view. */
-#newsButton {
-    background: none;
-    border: none;
-    cursor: pointer;
-    outline: none;
-}
-#newsButton:hover #newsButtonText,
-#newsButton:focus #newsButtonText {
-    text-shadow: 0px 0px 20px #fff, 0px 0px 20px #fff;
-}
-#newsButton:active {
-    color: #c7c7c7;
-    text-shadow: 0px 0px 20px #c7c7c7, 0px 0px 20px #c7c7c7;
-}
-
-#newsButton:hover #newsButtonSVG,
-#newsButton:focus #newsButtonSVG {
-    -webkit-filter: drop-shadow(0px 0px 2px #fff);
-}
-#newsButton:active #newsButtonSVG .arrowLine {
-    stroke: #c7c7c7;
-}
-#newsButton:active #newsButtonSVG {
-    -webkit-filter: drop-shadow(0px 0px 2px #c7c7c7);
-}
-#newsButton:disabled #newsButtonSVG .arrowLine {
-    stroke: rgba(255, 255, 255, 0.75);
-}
-
 /* Icon which indicates there is new news. */
 #newsButtonAlert {
     width: 5px;
@@ -3185,18 +2997,6 @@ input:checked + .toggleSwitchSlider:before {
 #newsButtonSVG {
     height: 11px;
     margin-left: -2px;
-    transition: 0.25s ease;
-}
-
-/* Span which contains the news button text. */
-#newsButtonText {
-    color: white;
-    font-weight: 900;
-    letter-spacing: 2px;
-    text-shadow: 0px 0px 0px #bebcbb;
-    font-size: 11px;
-    line-height: 30px;
-    display: flex;
     transition: 0.25s ease;
 }
 
@@ -4117,12 +3917,23 @@ button:disabled {
     font-size: 12px;
     font-weight: 650;
     text-align: left;
+    text-shadow: none;
+    transition: background-color 120ms ease, box-shadow 120ms ease, color 120ms ease;
+}
+
+.sidebarNavButton * {
+    text-shadow: none;
 }
 
 .sidebarNavButton:hover,
-.sidebarNavButton:focus,
+.sidebarNavButton:focus-visible,
 .sidebarNavButton[selected] {
     background: #35312f;
+}
+
+.sidebarNavButton:active:not([selected]) {
+    background: #262321;
+    box-shadow: inset 0 2px rgba(0, 0, 0, 0.34);
 }
 
 .sidebarNavButton[selected]::before {
@@ -4509,22 +4320,6 @@ button:disabled {
     display: none;
 }
 
-#landingModsRetryButton {
-    min-height: 34px;
-    padding: 0 18px;
-    border: 1px solid #5d5752;
-    background: #322f2c;
-    box-shadow: inset 0 -3px rgba(0, 0, 0, 0.28);
-    color: #fff;
-    cursor: pointer;
-}
-
-#landingModsRetryButton:hover,
-#landingModsRetryButton:focus-visible {
-    border-color: #837a73;
-    background: #403b37;
-}
-
 #landingModsServer {
     min-width: 0;
     display: grid;
@@ -4668,23 +4463,6 @@ button:disabled {
 #landingJavaStatus[hidden],
 #landingJavaContent[hidden] {
     display: none;
-}
-
-#landingJavaRetryButton {
-    min-height: 34px;
-    padding: 0 18px;
-    border: 1px solid #5d5752;
-    border-radius: 0;
-    background: #322f2c;
-    box-shadow: inset 0 -3px rgba(0, 0, 0, 0.28);
-    color: #fff;
-    cursor: pointer;
-}
-
-#landingJavaRetryButton:hover,
-#landingJavaRetryButton:focus-visible {
-    border-color: #837a73;
-    background: #403b37;
 }
 
 #landingJavaServer {
@@ -5338,24 +5116,6 @@ button:disabled {
     font-weight: 700;
 }
 
-#newsPreviewAction,
-#newsBackButton {
-    padding: 8px 12px;
-    border: 1px solid var(--mc-border);
-    background: var(--mc-surface);
-    color: #fff;
-    cursor: pointer;
-    font-size: 10px;
-}
-
-#newsPreviewAction:hover,
-#newsPreviewAction:focus,
-#newsBackButton:hover,
-#newsBackButton:focus {
-    border-color: #77716b;
-    background: var(--mc-surface-hover);
-}
-
 #newsCards {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5921,31 +5681,114 @@ button:disabled {
     border-color: var(--mc-settings-accent);
 }
 
-.settingsAddAuthAccount,
-.settingsFileSelButton,
-.settingsSwitchServerButton,
-#settingsDropinFileSystemButton,
-#settingsShaderpackButton,
-#settingsChangelogButton,
-#settingsUpdateActionButton {
+.mcButtonSecondary,
+.mcButtonDanger {
     min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 0 14px;
-    border: 1px solid #5d5752;
     border-radius: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    text-shadow: none;
+    transition: opacity 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.mcButtonSecondary {
+    border: 1px solid #5d5752;
     background: #322f2c;
     box-shadow: inset 0 -3px rgba(0, 0, 0, 0.28);
     color: #fff;
 }
 
-.settingsAddAuthAccount:hover,
-.settingsFileSelButton:hover,
-.settingsSwitchServerButton:hover,
-#settingsDropinFileSystemButton:hover,
-#settingsShaderpackButton:hover,
-#settingsChangelogButton:hover,
-#settingsUpdateActionButton:hover {
+.mcButtonSecondary:hover:not(:disabled):not([aria-disabled='true']) {
     border-color: #837a73;
     background: #403b37;
+}
+
+.mcButtonSecondary:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(1px);
+    border-color: #514b46;
+    background: #292624;
+    box-shadow: inset 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.mcButtonSecondary:disabled,
+.mcButtonSecondary[aria-disabled='true'] {
+    box-shadow: inset 0 -3px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+    transform: none;
+}
+
+.mcButtonWide {
+    justify-content: flex-start;
+}
+
+.mcButtonIcon {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+}
+
+.mcButtonCompact {
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 11px;
+}
+
+.settingsFileSelActions > .mcButtonFile {
+    height: 30px;
+    min-height: 30px;
+    border-left: 0;
+}
+
+.mcButtonDanger {
+    border: 1px solid #a64b45;
+    background: #371f1d;
+    box-shadow: inset 0 -3px rgba(0, 0, 0, 0.25);
+    color: #ffd8d4;
+}
+
+.mcButtonDanger:hover:not(:disabled) {
+    border-color: #d1665e;
+    background: #4a2926;
+    color: #fff0ee;
+}
+
+.mcButtonDanger:active:not(:disabled) {
+    transform: translateY(1px);
+    border-color: #8e3d37;
+    background: #2e1917;
+    box-shadow: inset 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.mcButtonDanger:disabled {
+    pointer-events: none;
+    transform: none;
+}
+
+.settingsAuthAccountSelect[selected] {
+    border-color: #4d7f3e;
+    background: #263722;
+    box-shadow: none;
+    color: #d9f6d0;
+    transform: none;
+}
+
+#settingsDropinFileSystemButton[drag],
+#settingsShaderpackButton[drag] {
+    border-color: #67a854;
+    background: #284020;
+    box-shadow: inset 0 0 0 1px rgba(123, 198, 96, 0.22);
+    color: #efffeb;
+    text-shadow: none;
 }
 
 .settingsAuthAccount,
@@ -6192,5 +6035,10 @@ button:disabled {
         transition-duration: 0.01ms !important;
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
+    }
+
+    .mcButtonSecondary:active,
+    .mcButtonDanger:active {
+        transform: none !important;
     }
 }

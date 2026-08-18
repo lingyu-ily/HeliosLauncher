@@ -184,7 +184,7 @@ async function resolveLandingDropinMods(server, requestSequence){
                             <div class="settingsModDetails">
                                 <span class="settingsModName">${escapeModMarkup(dropin.name)}</span>
                                 <div class="settingsDropinRemoveWrapper">
-                                    <button class="settingsDropinRemoveButton" type="button" remmod="${fullName}">${Lang.queryJS('landing.mods.removeButton')}</button>
+                                    <button class="settingsDropinRemoveButton mcButtonDanger mcButtonCompact" type="button" remmod="${fullName}">${Lang.queryJS('landing.mods.removeButton')}</button>
                                 </div>
                             </div>
                         </div>

@@ -31,7 +31,7 @@
                         <span><%- lang('settings.microsoftAccount') %></span>
                     </div>
                     <div class="settingsAuthAccountTypeHeaderRight">
-                        <button class="settingsAddAuthAccount" id="settingsAddMicrosoftAccount"><%- lang('settings.addMicrosoftAccount') %></button>
+                        <button class="settingsAddAuthAccount mcButtonSecondary" id="settingsAddMicrosoftAccount"><%- lang('settings.addMicrosoftAccount') %></button>
                     </div>
                 </div>
                 
@@ -51,7 +51,7 @@
                         <span><%- lang('settings.mojangAccount') %></span>
                     </div>
                     <div class="settingsAuthAccountTypeHeaderRight">
-                        <button class="settingsAddAuthAccount" id="settingsAddMojangAccount"><%- lang('settings.addMojangAccount') %></button>
+                        <button class="settingsAddAuthAccount mcButtonSecondary" id="settingsAddMojangAccount"><%- lang('settings.addMojangAccount') %></button>
                     </div>
                 </div>
                 
@@ -139,7 +139,7 @@
                             </svg>
                         </div>
                         <input class="settingsFileSelVal" type="text" value="null" cValue="DataDirectory" disabled>
-                        <button class="settingsFileSelButton" dialogTitle="<%- lang('settings.selectDataDirectory') %>" dialogDirectory="true"><%- lang('settings.chooseFolder') %></button>
+                        <button class="settingsFileSelButton mcButtonSecondary mcButtonFile" dialogTitle="<%- lang('settings.selectDataDirectory') %>" dialogDirectory="true"><%- lang('settings.chooseFolder') %></button>
                     </div>
                 </div>
                 <div class="settingsFileSelDesc"><%- lang('settings.dataDirectoryDesc') %></div>
@@ -168,11 +168,11 @@
                     </div>
                 </div>
                 <div id="settingsAboutButtons">
-                    <a href="<%- lang('settings.sourceGithubLink') %>" id="settingsAboutSourceButton" class="settingsAboutButton"><%- lang('settings.sourceGithub') %></a>
+                    <a href="<%- lang('settings.sourceGithubLink') %>" id="settingsAboutSourceButton" class="settingsAboutButton mcButtonSecondary"><%- lang('settings.sourceGithub') %></a>
                     <!-- The following must be included in third-party usage. -->
                     <!-- <a href="https://github.com/lingyu-ily/MapleCraftLauncher" id="settingsAboutSourceButton" class="settingsAboutButton">Original Source</a> -->
-                    <a href="<%- lang('settings.supportLink') %>" id="settingsAboutSupportButton" class="settingsAboutButton"><%- lang('settings.support') %></a>
-                    <a href="#" id="settingsAboutDevToolsButton" class="settingsAboutButton"><%- lang('settings.devToolsConsole') %></a>
+                    <a href="<%- lang('settings.supportLink') %>" id="settingsAboutSupportButton" class="settingsAboutButton mcButtonSecondary"><%- lang('settings.support') %></a>
+                    <a href="#" id="settingsAboutDevToolsButton" class="settingsAboutButton mcButtonSecondary"><%- lang('settings.devToolsConsole') %></a>
                 </div>
             </div>
             <div class="settingsChangelogContainer">
@@ -186,7 +186,7 @@
                     </div>
                 </div>
                 <div class="settingsChangelogActions">
-                    <a class="settingsChangelogButton settingsAboutButton" href="#"><%- lang('settings.viewReleaseNotes') %></a>
+                    <a class="settingsChangelogButton settingsAboutButton mcButtonSecondary" href="#"><%- lang('settings.viewReleaseNotes') %></a>
                 </div>
             </div>
         </div>
@@ -211,7 +211,7 @@
                         </div>
                     </div>
                     <div id="settingsUpdateActionContainer">
-                        <button id="settingsUpdateActionButton"><%- lang('settings.checkForUpdates') %></button>
+                        <button id="settingsUpdateActionButton" class="mcButtonSecondary"><%- lang('settings.checkForUpdates') %></button>
                     </div>
                 </div>
             </div>

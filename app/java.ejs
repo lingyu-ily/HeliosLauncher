@@ -5,7 +5,7 @@
     </header>
     <div id="landingJavaStatus" role="status" aria-live="polite">
         <span id="landingJavaStatusText"><%- lang('landing.javaLoading') %></span>
-        <button id="landingJavaRetryButton" type="button" hidden><%- lang('landing.javaRetry') %></button>
+        <button id="landingJavaRetryButton" class="mcButtonSecondary" type="button" hidden><%- lang('landing.javaRetry') %></button>
     </div>
     <div id="landingJavaContent" hidden>
         <svg class="landingJavaIconDefinitions" aria-hidden="true" focusable="false">
@@ -82,7 +82,7 @@
                         <svg class="settingsFileSelSVG" viewBox="0 0 305.001 305.001"><use href="#landingJavaOriginalIcon"></use></svg>
                     </div>
                     <input class="settingsFileSelVal" id="settingsJavaExecVal" type="text" value="" disabled>
-                    <button class="settingsFileSelButton" id="settingsJavaExecSel" type="button" dialogTitle="<%- lang('landing.javaExecSelDialogTitle') %>" dialogDirectory="false"><%- lang('landing.javaExecSelButtonText') %></button>
+                    <button class="settingsFileSelButton mcButtonSecondary mcButtonFile" id="settingsJavaExecSel" type="button" dialogTitle="<%- lang('landing.javaExecSelDialogTitle') %>" dialogDirectory="false"><%- lang('landing.javaExecSelButtonText') %></button>
                 </div>
             </div>
             <div class="settingsFileSelDesc"><%- lang('landing.javaExecDesc') %> <strong id="settingsJavaReqDesc"></strong><br><%- lang('landing.javaPathDesc', {'pathSuffix': `bin${process.platform === 'win32' ? '\\javaw.exe' : '/java'}`}) %></div>

@@ -732,7 +732,7 @@ function populateAuthAccounts(){
         actions.className = 'settingsAuthAccountActions'
         const select = document.createElement('button')
         select.type = 'button'
-        select.className = 'settingsAuthAccountSelect'
+        select.className = 'settingsAuthAccountSelect mcButtonSecondary mcButtonCompact'
         const selected = selectedUUID === acc.uuid
         select.toggleAttribute('selected', selected)
         select.textContent = Lang.queryJS(`settings.authAccountPopulate.${selected ? 'selectedAccount' : 'selectAccount'}`)
@@ -740,7 +740,7 @@ function populateAuthAccounts(){
         logoutWrapper.className = 'settingsAuthAccountWrapper'
         const logout = document.createElement('button')
         logout.type = 'button'
-        logout.className = 'settingsAuthAccountLogOut'
+        logout.className = 'settingsAuthAccountLogOut mcButtonDanger mcButtonCompact'
         logout.textContent = Lang.queryJS('settings.authAccountPopulate.logout')
         logoutWrapper.appendChild(logout)
         actions.append(select, logoutWrapper)

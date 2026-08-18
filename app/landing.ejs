@@ -68,7 +68,7 @@
                             <span id="newsPreviewEyebrow"><%- lang('landing.navWhatsNew') %></span>
                             <h2 id="newsPreviewTitle"><%- lang('landing.newsPreviewTitle') %></h2>
                         </div>
-                        <button id="newsPreviewAction" type="button"><%- lang('landing.newsPreviewAction') %></button>
+                        <button id="newsPreviewAction" class="mcButtonSecondary" type="button"><%- lang('landing.newsPreviewAction') %></button>
                     </div>
                     <div id="newsCards" aria-live="polite">
                         <div class="newsPreviewState"><%- lang('landing.newsErrorLoadSpan') %></div>
@@ -83,7 +83,7 @@
                 </header>
                 <div id="landingModsStatus" role="status" aria-live="polite">
                     <span id="landingModsStatusText"><%- lang('landing.modsLoading') %></span>
-                    <button id="landingModsRetryButton" type="button" hidden><%- lang('landing.modsRetry') %></button>
+                    <button id="landingModsRetryButton" class="mcButtonSecondary" type="button" hidden><%- lang('landing.modsRetry') %></button>
                 </div>
                 <div id="landingModsContent" hidden>
                     <section id="landingModsServer" aria-label="<%- lang('landing.modsSelectedServer') %>">
@@ -107,14 +107,14 @@
                         </section>
                         <section id="settingsDropinModsContainer">
                             <h2 class="settingsModsHeader"><%- lang('landing.modsDropin') %></h2>
-                            <button id="settingsDropinFileSystemButton" type="button"><%- lang('landing.modsAdd') %> <span id="settingsDropinRefreshNote"><%- lang('landing.modsRefreshNote') %></span></button>
+                            <button id="settingsDropinFileSystemButton" class="mcButtonSecondary mcButtonWide" type="button"><%- lang('landing.modsAdd') %> <span id="settingsDropinRefreshNote"><%- lang('landing.modsRefreshNote') %></span></button>
                             <div id="settingsDropinModsContent"></div>
                         </section>
                         <section id="settingsShadersContainer">
                             <h2 class="settingsModsHeader"><%- lang('landing.modsShaderpacks') %></h2>
                             <div id="settingsShaderpackDesc"><%- lang('landing.modsShaderpackDesc') %></div>
                             <div id="settingsShaderpackWrapper">
-                                <button id="settingsShaderpackButton" type="button" aria-label="<%- lang('landing.modsAddShaderpack') %>">+</button>
+                                <button id="settingsShaderpackButton" class="mcButtonSecondary mcButtonIcon" type="button" aria-label="<%- lang('landing.modsAddShaderpack') %>">+</button>
                                 <div class="settingsSelectContainer">
                                     <button class="settingsSelectSelected" id="settingsShadersSelected" type="button" aria-haspopup="listbox" aria-expanded="false"><%- lang('landing.modsSelectShaderpack') %></button>
                                     <div class="settingsSelectOptions" id="settingsShadersOptions" role="listbox" hidden></div>
@@ -133,7 +133,7 @@
                         <span id="newsViewEyebrow">MAPLECRAFT</span>
                         <h1 id="newsViewTitle"><%- lang('landing.navUpdates') %></h1>
                     </div>
-                    <button id="newsBackButton" type="button"><%- lang('landing.backToPlay') %></button>
+                    <button id="newsBackButton" class="mcButtonSecondary" type="button"><%- lang('landing.backToPlay') %></button>
                 </div>
                 <div id="newsContent" article="-1" style="display: none;">
                     <div id="newsStatusContainer">
@@ -165,7 +165,7 @@
                     </div>
                     <div id="newsErrorFailed" style="display: none;">
                         <span id="nEFailedSpan" class="newsErrorContent"><%- lang('landing.newsErrorFailedSpan') %></span>
-                        <button id="newsErrorRetry"><%- lang('landing.newsErrorRetryButton') %></button>
+                        <button id="newsErrorRetry" class="mcButtonSecondary"><%- lang('landing.newsErrorRetryButton') %></button>
                     </div>
                     <div id="newsErrorNone" style="display: none;">
                         <span id="nENoneSpan" class="newsErrorContent"><%- lang('landing.newsErrorNoneSpan') %></span>

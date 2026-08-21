@@ -2,7 +2,7 @@ const remoteMain = require('@electron/remote/main')
 remoteMain.initialize()
 
 // Requirements
-const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, Menu, session, shell } = require('electron')
 const autoUpdater                       = require('electron-updater').autoUpdater
 const ejse                              = require('ejs-electron')
 const fs                                = require('fs')
@@ -342,6 +342,22 @@ function getPlatformIcon(filename){
     return path.join(__dirname, 'app', 'assets', 'images', `${filename}.${ext}`)
 }
 
+function configureYouTubeEmbedIdentity(){
+    session.defaultSession.webRequest.onBeforeSendHeaders({
+        urls: [
+            'https://www.youtube.com/embed/*',
+            'https://www.youtube-nocookie.com/embed/*'
+        ]
+    }, (details, callback) => {
+        const headers = { ...details.requestHeaders }
+        if(headers.Referer == null && headers.referer == null){
+            headers.Referer = 'https://mcl.maplecraft.net/'
+        }
+        callback({ requestHeaders: headers })
+    })
+}
+
+app.on('ready', configureYouTubeEmbedIdentity)
 app.on('ready', createWindow)
 app.on('ready', createMenu)
 

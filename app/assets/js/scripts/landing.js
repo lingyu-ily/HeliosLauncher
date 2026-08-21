@@ -2,8 +2,14 @@
  * Script for landing.ejs
  */
 // Requirements
-const { clipboard }           = require('electron')
-const { URL }                 = require('url')
+const { clipboard: landingClipboard } = require('electron')
+const nodeCrypto                     = require('crypto')
+const fsExtra                        = require('fs-extra')
+const gotClient                      = require('got')
+const nodePath                       = require('path')
+const { Transform: StreamTransform } = require('stream')
+const { pipeline: streamPipeline }   = require('stream/promises')
+const { URL: NodeURL, pathToFileURL: filePathToURL } = require('url')
 const {
     MojangRestAPI,
     getServerStatus
@@ -56,6 +62,12 @@ const selectedServerName      = document.getElementById('selectedServerName')
 const selectedServerVersion   = document.getElementById('selectedServerVersion')
 const launcherGameEyebrow     = document.getElementById('launcherGameEyebrow')
 const launcherHero            = document.getElementById('launcherHero')
+const launcherHeroVideo       = document.getElementById('launcherHeroVideo')
+const launcherHeroYouTube     = document.getElementById('launcherHeroYouTube')
+const launcherHeroMediaControls = document.getElementById('launcherHeroMediaControls')
+const launcherHeroPlayToggle  = document.getElementById('launcherHeroPlayToggle')
+const launcherHeroMuteToggle  = document.getElementById('launcherHeroMuteToggle')
+const launcherHeroMediaStatus = document.getElementById('launcherHeroMediaStatus')
 const launcherHeroLogo        = document.getElementById('image_seal')
 const launcherHeroWordmark    = document.getElementById('launcherHeroWordmark')
 const launcherHeroTagline     = document.getElementById('launcherHeroTagline')
@@ -70,6 +82,11 @@ const defaultServerPresentation = {
     newsTitle: newsPreviewTitle.textContent
 }
 let heroPresentationSequence = 0
+let activeHeroMedia = null
+let activeHeroMediaReady = false
+let activeHeroMediaDownload = null
+let activeHeroMediaPromise = null
+let heroMediaMuted = true
 
 const loggerLanding = LoggerUtil.getLogger('Landing')
 const launchButtonDefaultText = launch_button.textContent
@@ -112,7 +129,7 @@ launchAccountName.onclick = () => {
         return
     }
     try {
-        clipboard.writeText(displayName)
+        landingClipboard.writeText(displayName)
         showLaunchAccountCopyFeedback(Lang.queryJS('landing.accountCopy.copied'))
     } catch(err) {
         loggerLanding.warn('Failed to copy the player name to the clipboard.', err)
@@ -619,10 +636,360 @@ function preloadHeroAsset(source, fallback){
     })
 }
 
+function normalizeHeroVideoDescriptor(value){
+    if(value == null || typeof value !== 'object'){
+        return null
+    }
+    if(value.type === 'youtube' && typeof value.videoId === 'string' && /^[A-Za-z0-9_-]{11}$/.test(value.videoId)){
+        return { type: 'youtube', videoId: value.videoId }
+    }
+    if(value.type !== 'file' || typeof value.url !== 'string'){
+        return null
+    }
+    let parsedUrl
+    try {
+        parsedUrl = new NodeURL(value.url)
+        if(parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:'){
+            return null
+        }
+    } catch {
+        return null
+    }
+    const contentType = value.contentType === 'video/webm' || parsedUrl.pathname.toLowerCase().endsWith('.webm')
+        ? 'video/webm'
+        : 'video/mp4'
+    return {
+        type: 'file',
+        url: value.url,
+        contentType,
+        sha256: typeof value.sha256 === 'string' && /^[a-f\d]{64}$/i.test(value.sha256) ? value.sha256.toLowerCase() : null,
+        size: Number.isSafeInteger(value.size) && value.size > 0 ? value.size : null
+    }
+}
+
+function setHeroMediaStatus(message = ''){
+    launcherHeroMediaStatus.textContent = message
+}
+
+function updateHeroMediaControls(){
+    const configured = activeHeroMedia != null
+    const playRequested = ConfigManager.getPlayHeroVideos()
+    launcherHeroMediaControls.hidden = !configured
+    launcherHeroPlayToggle.textContent = playRequested ? 'Ⅱ' : '▶'
+    launcherHeroPlayToggle.setAttribute('aria-pressed', playRequested.toString())
+    launcherHeroPlayToggle.setAttribute('aria-label', Lang.queryJS(`landing.heroVideo.${playRequested ? 'pause' : 'play'}`))
+    launcherHeroMuteToggle.textContent = heroMediaMuted ? '🔇' : '🔊'
+    launcherHeroMuteToggle.setAttribute('aria-pressed', heroMediaMuted.toString())
+    launcherHeroMuteToggle.setAttribute('aria-label', Lang.queryJS(`landing.heroVideo.${heroMediaMuted ? 'unmute' : 'mute'}`))
+    launcherHeroMuteToggle.disabled = !configured || !activeHeroMediaReady
+}
+
+function sendYouTubeCommand(func){
+    const frame = launcherHeroYouTube.querySelector('iframe')
+    frame?.contentWindow?.postMessage(JSON.stringify({
+        event: 'command',
+        func,
+        args: []
+    }), 'https://www.youtube.com')
+}
+
+function heroMediaCanPlay(){
+    return ConfigManager.getPlayHeroVideos()
+        && getCurrentView() === VIEWS.landing
+        && getLandingSection() === 'play'
+        && !document.hidden
+        && document.hasFocus()
+}
+
+function syncHeroMediaPlayback(){
+    updateHeroMediaControls()
+    const shouldPlay = activeHeroMediaReady && heroMediaCanPlay()
+    launcherHeroVideo.muted = heroMediaMuted
+    if(activeHeroMedia?.descriptor.type === 'youtube'){
+        sendYouTubeCommand(heroMediaMuted ? 'mute' : 'unMute')
+        if(shouldPlay){
+            sendYouTubeCommand('playVideo')
+            launcherHeroYouTube.setAttribute('visible', '')
+        } else {
+            launcherHeroYouTube.removeAttribute('visible')
+            setTimeout(() => {
+                if(!heroMediaCanPlay()){
+                    sendYouTubeCommand('pauseVideo')
+                }
+            }, 200)
+        }
+        return
+    }
+    if(activeHeroMedia?.descriptor.type === 'file'){
+        if(shouldPlay){
+            void launcherHeroVideo.play().then(() => {
+                if(activeHeroMediaReady && heroMediaCanPlay()){
+                    launcherHeroVideo.setAttribute('visible', '')
+                }
+            }).catch(err => {
+                loggerLanding.warn('Unable to play the cached hero video.', err)
+                launcherHeroVideo.removeAttribute('visible')
+                setHeroMediaStatus(Lang.queryJS('landing.heroVideo.unavailable'))
+            })
+        } else {
+            launcherHeroVideo.removeAttribute('visible')
+            setTimeout(() => {
+                if(!heroMediaCanPlay()){
+                    launcherHeroVideo.pause()
+                }
+            }, 200)
+        }
+    }
+}
+
+function resetHeroMedia(){
+    activeHeroMediaDownload?.destroy()
+    activeHeroMediaDownload = null
+    activeHeroMediaPromise = null
+    activeHeroMediaReady = false
+    launcherHeroVideo.removeAttribute('visible')
+    launcherHeroVideo.pause()
+    launcherHeroVideo.removeAttribute('src')
+    launcherHeroVideo.load()
+    launcherHeroYouTube.removeAttribute('visible')
+    launcherHeroYouTube.replaceChildren()
+    setHeroMediaStatus()
+    updateHeroMediaControls()
+}
+
+function heroVideoCacheDirectory(serverId){
+    const safeId = nodeCrypto.createHash('sha256').update(serverId).digest('hex').slice(0, 32)
+    return nodePath.join(ConfigManager.getLauncherDirectory(), 'hero-video-cache', safeId)
+}
+
+function heroVideoCacheIdentity(descriptor){
+    return {
+        url: descriptor.url,
+        contentType: descriptor.contentType,
+        sha256: descriptor.sha256,
+        size: descriptor.size
+    }
+}
+
+function cacheIdentityMatches(left, right){
+    return left?.url === right.url
+        && left?.contentType === right.contentType
+        && (right.sha256 == null || left?.sha256 === right.sha256)
+        && (right.size == null || left?.size === right.size)
+}
+
+async function findCachedHeroVideo(serverId, descriptor){
+    const cacheDirectory = heroVideoCacheDirectory(serverId)
+    const metadata = await fsExtra.readJson(nodePath.join(cacheDirectory, 'metadata.json')).catch(() => null)
+    const identity = heroVideoCacheIdentity(descriptor)
+    if(!cacheIdentityMatches(metadata, identity) || typeof metadata?.fileName !== 'string'){
+        return null
+    }
+    const filePath = nodePath.join(cacheDirectory, metadata.fileName)
+    const fileStat = await fsExtra.stat(filePath).catch(() => null)
+    if(!fileStat?.isFile() || (descriptor.size != null && fileStat.size !== descriptor.size)){
+        return null
+    }
+    return filePath
+}
+
+async function cacheHeroVideo(serverId, descriptor, requestSequence){
+    const cached = await findCachedHeroVideo(serverId, descriptor)
+    if(cached){
+        return cached
+    }
+    const cacheDirectory = heroVideoCacheDirectory(serverId)
+    await fsExtra.ensureDir(cacheDirectory)
+    const extension = descriptor.contentType === 'video/webm' ? '.webm' : '.mp4'
+    const fileName = `video${extension}`
+    const filePath = nodePath.join(cacheDirectory, fileName)
+    const partPath = nodePath.join(cacheDirectory, `${fileName}.part`)
+    const metadataPath = nodePath.join(cacheDirectory, 'metadata.json')
+    const metadataPartPath = nodePath.join(cacheDirectory, 'metadata.json.part')
+    await Promise.all([fsExtra.remove(partPath), fsExtra.remove(metadataPartPath)])
+    setHeroMediaStatus(Lang.queryJS('landing.heroVideo.caching'))
+
+    const hash = nodeCrypto.createHash('sha256')
+    let size = 0
+    const maximumSize = descriptor.size ?? 2 * 1024 * 1024 * 1024
+    const meter = new StreamTransform({
+        transform(chunk, _encoding, callback){
+            size += chunk.length
+            if(size > maximumSize){
+                callback(new Error(`Hero video exceeds ${maximumSize} bytes`))
+                return
+            }
+            hash.update(chunk)
+            callback(null, chunk)
+        }
+    })
+    const request = gotClient.stream(descriptor.url, {
+        headers: { Accept: descriptor.contentType },
+        retry: { limit: 2 },
+        timeout: { response: 30_000 }
+    })
+    activeHeroMediaDownload = request
+    try {
+        await streamPipeline(request, meter, fsExtra.createWriteStream(partPath, { flags: 'wx' }))
+        const sha256 = hash.digest('hex')
+        if(requestSequence !== heroPresentationSequence){
+            await fsExtra.remove(partPath)
+            return null
+        }
+        if(descriptor.size != null && size !== descriptor.size){
+            throw new Error(`Hero video size mismatch: expected ${descriptor.size}, received ${size}`)
+        }
+        if(descriptor.sha256 != null && sha256 !== descriptor.sha256){
+            throw new Error('Hero video SHA-256 mismatch')
+        }
+        await fsExtra.move(partPath, filePath, { overwrite: true })
+        const staleFile = nodePath.join(cacheDirectory, extension === '.mp4' ? 'video.webm' : 'video.mp4')
+        await fsExtra.remove(staleFile)
+        await fsExtra.writeJson(metadataPartPath, {
+            ...heroVideoCacheIdentity(descriptor),
+            sha256,
+            size,
+            fileName
+        })
+        await fsExtra.move(metadataPartPath, metadataPath, { overwrite: true })
+        return filePath
+    } catch(err) {
+        await Promise.all([fsExtra.remove(partPath), fsExtra.remove(metadataPartPath)])
+        throw err
+    } finally {
+        if(activeHeroMediaDownload === request){
+            activeHeroMediaDownload = null
+        }
+    }
+}
+
+function prepareYouTubeHeroVideo(requestSequence){
+    const descriptor = activeHeroMedia?.descriptor
+    if(descriptor?.type !== 'youtube' || requestSequence !== heroPresentationSequence){
+        return
+    }
+    const frame = document.createElement('iframe')
+    frame.id = 'launcherHeroYouTubeFrame'
+    frame.title = descriptor.videoId
+    frame.allow = 'autoplay; encrypted-media'
+    frame.referrerPolicy = 'strict-origin-when-cross-origin'
+    frame.src = `https://www.youtube.com/embed/${descriptor.videoId}?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=${descriptor.videoId}&controls=0&playsinline=1&origin=https%3A%2F%2Fmcl.maplecraft.net&widget_referrer=https%3A%2F%2Fmcl.maplecraft.net%2F`
+    frame.onload = () => {
+        if(requestSequence !== heroPresentationSequence || activeHeroMedia?.descriptor !== descriptor){
+            return
+        }
+        activeHeroMediaReady = true
+        setHeroMediaStatus()
+        syncHeroMediaPlayback()
+    }
+    frame.onerror = () => {
+        if(requestSequence === heroPresentationSequence){
+            activeHeroMediaReady = false
+            launcherHeroYouTube.removeAttribute('visible')
+            setHeroMediaStatus(Lang.queryJS('landing.heroVideo.unavailable'))
+            updateHeroMediaControls()
+        }
+    }
+    launcherHeroYouTube.replaceChildren(frame)
+}
+
+async function prepareFileHeroVideo(requestSequence){
+    const media = activeHeroMedia
+    if(media?.descriptor.type !== 'file'){
+        return
+    }
+    let filePath = null
+    try {
+        filePath = await cacheHeroVideo(media.serverId, media.descriptor, requestSequence)
+        if(!filePath || requestSequence !== heroPresentationSequence || activeHeroMedia !== media){
+            return
+        }
+        launcherHeroVideo.src = filePathToURL(filePath).toString()
+        launcherHeroVideo.muted = heroMediaMuted
+        launcherHeroVideo.load()
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Cached hero video did not become playable')), 10_000)
+            launcherHeroVideo.oncanplay = () => {
+                clearTimeout(timeout)
+                resolve()
+            }
+            launcherHeroVideo.onerror = () => {
+                clearTimeout(timeout)
+                reject(new Error('Cached hero video could not be decoded'))
+            }
+        })
+        if(requestSequence !== heroPresentationSequence || activeHeroMedia !== media){
+            return
+        }
+        activeHeroMediaReady = true
+        setHeroMediaStatus()
+        syncHeroMediaPlayback()
+    } catch(err) {
+        if(requestSequence !== heroPresentationSequence){
+            return
+        }
+        loggerLanding.warn('Unable to cache or play the hero video.', err)
+        if(filePath){
+            await Promise.all([
+                fsExtra.remove(filePath),
+                fsExtra.remove(nodePath.join(heroVideoCacheDirectory(media.serverId), 'metadata.json'))
+            ])
+        }
+        activeHeroMediaReady = false
+        launcherHeroVideo.removeAttribute('visible')
+        setHeroMediaStatus(Lang.queryJS('landing.heroVideo.cacheFailed'))
+        updateHeroMediaControls()
+    }
+}
+
+function prepareActiveHeroMedia(requestSequence){
+    if(activeHeroMediaPromise || !activeHeroMedia || !ConfigManager.getPlayHeroVideos()){
+        return
+    }
+    if(activeHeroMedia.descriptor.type === 'youtube'){
+        prepareYouTubeHeroVideo(requestSequence)
+        return
+    }
+    activeHeroMediaPromise = prepareFileHeroVideo(requestSequence).finally(() => {
+        if(requestSequence === heroPresentationSequence){
+            activeHeroMediaPromise = null
+        }
+    })
+}
+
+function configureHeroMedia(serverId, descriptor, requestSequence){
+    resetHeroMedia()
+    if(!descriptor || !serverId){
+        activeHeroMedia = null
+        updateHeroMediaControls()
+        return
+    }
+    activeHeroMedia = { serverId, descriptor }
+    updateHeroMediaControls()
+    prepareActiveHeroMedia(requestSequence)
+}
+
+launcherHeroPlayToggle.onclick = () => {
+    const play = !ConfigManager.getPlayHeroVideos()
+    ConfigManager.setPlayHeroVideos(play)
+    ConfigManager.save()
+    updateHeroMediaControls()
+    if(play){
+        prepareActiveHeroMedia(heroPresentationSequence)
+    }
+    syncHeroMediaPlayback()
+}
+
+launcherHeroMuteToggle.onclick = () => {
+    heroMediaMuted = !heroMediaMuted
+    syncHeroMediaPlayback()
+}
+
 async function applyServerPresentation(serv){
     const requestSequence = ++heroPresentationSequence
     const rawServer = serv?.rawServer
     const hero = rawServer?.ui?.hero || {}
+    const video = normalizeHeroVideoDescriptor(hero.video)
     const eyebrow = typeof hero.eyebrow === 'string' && hero.eyebrow.trim()
         ? hero.eyebrow.trim()
         : defaultServerPresentation.eyebrow
@@ -639,6 +1006,7 @@ async function applyServerPresentation(serv){
     launcherHeroWordmark.textContent = presentation.title
     launcherHeroTagline.textContent = presentation.tagline
     newsPreviewTitle.textContent = presentation.title || defaultServerPresentation.newsTitle
+    configureHeroMedia(rawServer?.id, video, requestSequence)
 
     const [background, logo] = await Promise.all([
         preloadHeroAsset(presentation.background, defaultServerPresentation.background),
@@ -1238,6 +1606,7 @@ function setLandingSection(section){
     }
 
     activeLandingSection = section
+    syncHeroMediaPlayback()
     const showUpdates = section === 'updates'
     document.getElementById('landingHomeButton').toggleAttribute('selected', section === 'play')
     document.getElementById('newsButton').toggleAttribute('selected', showUpdates)
@@ -1304,6 +1673,26 @@ document.getElementById('launcherGameTabs').addEventListener('keydown', event =>
     tabs[nextIndex].click()
 })
 setLandingSection('play')
+
+document.addEventListener('visibilitychange', syncHeroMediaPlayback)
+window.addEventListener('focus', syncHeroMediaPlayback)
+window.addEventListener('blur', syncHeroMediaPlayback)
+window.addEventListener('message', event => {
+    if(event.origin !== 'https://www.youtube.com' || activeHeroMedia?.descriptor.type !== 'youtube'){
+        return
+    }
+    try {
+        const message = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+        if(message?.event === 'onError'){
+            activeHeroMediaReady = false
+            launcherHeroYouTube.removeAttribute('visible')
+            setHeroMediaStatus(Lang.queryJS('landing.heroVideo.unavailable'))
+            updateHeroMediaControls()
+        }
+    } catch {
+        // Ignore unrelated YouTube postMessage traffic.
+    }
+})
 
 // Array to store article meta.
 let newsArr = null
@@ -1438,7 +1827,7 @@ function showNewsAlert(){
 
 async function digestMessage(str) {
     const msgUint8 = new TextEncoder().encode(str)
-    const hashBuffer = await crypto.subtle.digest('SHA-1', msgUint8)
+    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-1', msgUint8)
     const hashArray = Array.from(new Uint8Array(hashBuffer))
     const hashHex = hashArray
         .map((b) => b.toString(16).padStart(2, '0'))
@@ -1654,7 +2043,7 @@ async function loadNews(newsFeed){
     const promise = new Promise(resolve => {
         let newsHost
         try {
-            newsHost = new URL(newsFeed).origin + '/'
+            newsHost = new NodeURL(newsFeed).origin + '/'
         } catch(err) {
             loggerLanding.warn('Invalid RSS feed URL.', newsFeed)
             resolve({ articles: null })

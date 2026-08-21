@@ -13,11 +13,18 @@
         <div id="landingWorkspaceScroll">
             <main id="landingPlayView" class="landingSectionView" role="tabpanel" aria-labelledby="landingPlayButton">
                 <section id="launcherHero" data-default-background="assets/images/backgrounds/<%=bkid%>.jpg" style="background-image: url('assets/images/backgrounds/<%=bkid%>.jpg');">
+                    <video id="launcherHeroVideo" loop playsinline preload="metadata" aria-hidden="true"></video>
+                    <div id="launcherHeroYouTube" aria-hidden="true"></div>
                     <div id="launcherHeroShade"></div>
                     <div id="image_seal_container">
                         <img id="image_seal" src="assets/images/Maple.png" alt="MapleCraft"/>
                         <div id="launcherHeroWordmark">MAPLECRAFT</div>
                         <div id="launcherHeroTagline"><%- lang('landing.heroTagline') %></div>
+                    </div>
+                    <div id="launcherHeroMediaControls" hidden>
+                        <button id="launcherHeroPlayToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.pause') %>">Ⅱ</button>
+                        <button id="launcherHeroMuteToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.unmute') %>">🔇</button>
+                        <span id="launcherHeroMediaStatus" role="status" aria-live="polite"></span>
                     </div>
                 </section>
 

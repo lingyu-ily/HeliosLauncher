@@ -76,6 +76,10 @@ javaPathDesc = "路徑應以 <strong>{pathSuffix}</strong> 結尾。"
 javaJvmOptsTitle = "其他 JVM 選項"
 javaJvmOptsDesc = "執行時傳遞給 JVM 的選項；不應包含 <em>-Xms</em> 與 <em>-Xmx</em>。"
 
+[ejs.landing.heroVideo]
+pause = "暫停背景影片"
+unmute = "取消背景影片靜音"
+
 [ejs.login]
 loginCancelText = "取消"
 loginSubheader = "MINECRAFT 登入"
@@ -225,6 +229,15 @@ current = "目前帳號"
 [js.landing.accountCopy]
 copied = "已複製"
 failed = "無法複製"
+
+[js.landing.heroVideo]
+play = "播放背景影片"
+pause = "暫停背景影片"
+mute = "背景影片靜音"
+unmute = "取消背景影片靜音"
+caching = "正在快取背景影片…"
+cacheFailed = "無法快取背景影片"
+unavailable = "背景影片目前無法播放"
 
 [js.landing.selectedServer]
 noSelection = "尚未選擇伺服器"

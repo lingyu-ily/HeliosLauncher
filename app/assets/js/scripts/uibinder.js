@@ -12,6 +12,8 @@ const { DistroAPI } = require('./assets/js/distromanager')
 
 let rscShouldLoad = false
 let fatalStartupError = false
+let fatalStartupShown = false
+let startupInitializationPromise = null
 
 // Mapping of each view to their container IDs.
 const VIEWS = {
@@ -88,6 +90,9 @@ function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, on
     }
 
     currentView = next
+    if(typeof syncHeroMediaPlayback === 'function'){
+        syncHeroMediaPlayback()
+    }
     $(`${current}`).fadeOut(currentFadeTime, async () => {
         await onCurrentFade()
         syncLauncherShell(next)
@@ -157,8 +162,14 @@ async function showMainUI(data){
 }
 
 function showFatalStartupError(){
+    if(fatalStartupShown){
+        return
+    }
+    fatalStartupShown = true
+
     setTimeout(() => {
         $('#loadingContainer').fadeOut(250, () => {
+            $('#loadSpinnerImage').removeClass('rotating')
             document.getElementById('overlayContainer').style.background = 'none'
             setOverlayContent(
                 Lang.queryJS('uibinder.startup.fatalErrorTitle'),
@@ -172,6 +183,27 @@ function showFatalStartupError(){
             toggleOverlay(true)
         })
     }, 750)
+}
+
+function initializeMainUISafely(){
+    if(startupInitializationPromise != null){
+        return startupInitializationPromise
+    }
+
+    startupInitializationPromise = (async () => {
+        try {
+            const data = await DistroAPI.getDistribution()
+            syncModConfigurations(data)
+            ensureJavaSettings(data)
+            await showMainUI(data)
+        } catch(error) {
+            fatalStartupError = true
+            loggerUICore.error('Failed to initialize the launcher UI.', error)
+            showFatalStartupError()
+        }
+    })()
+
+    return startupInitializationPromise
 }
 
 /**
@@ -472,8 +504,7 @@ document.addEventListener('readystatechange', async () => {
         if(rscShouldLoad){
             rscShouldLoad = false
             if(!fatalStartupError){
-                const data = await DistroAPI.getDistribution()
-                await showMainUI(data)
+                await initializeMainUISafely()
             } else {
                 showFatalStartupError()
             }
@@ -485,11 +516,8 @@ document.addEventListener('readystatechange', async () => {
 // Actions that must be performed after the distribution index is downloaded.
 ipcRenderer.on('distributionIndexDone', async (event, res) => {
     if(res) {
-        const data = await DistroAPI.getDistribution()
-        syncModConfigurations(data)
-        ensureJavaSettings(data)
         if(document.readyState === 'interactive' || document.readyState === 'complete'){
-            await showMainUI(data)
+            await initializeMainUISafely()
         } else {
             rscShouldLoad = true
         }

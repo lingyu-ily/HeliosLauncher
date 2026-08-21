@@ -86,6 +86,7 @@ const DEFAULT_CONFIG = {
         },
         launcher: {
             allowPrerelease: false,
+            playHeroVideos: true,
             dataDirectory: dataPath
         }
     },
@@ -820,4 +821,23 @@ exports.getAllowPrerelease = function(def = false){
  */
 exports.setAllowPrerelease = function(allowPrerelease){
     config.settings.launcher.allowPrerelease = allowPrerelease
+}
+
+/**
+ * Check whether server hero videos should play when available.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {boolean} Whether hero videos should play.
+ */
+exports.getPlayHeroVideos = function(def = false){
+    return !def ? config.settings.launcher.playHeroVideos : DEFAULT_CONFIG.settings.launcher.playHeroVideos
+}
+
+/**
+ * Change the global hero video playback preference.
+ *
+ * @param {boolean} playHeroVideos Whether hero videos should play.
+ */
+exports.setPlayHeroVideos = function(playHeroVideos){
+    config.settings.launcher.playHeroVideos = Boolean(playHeroVideos)
 }

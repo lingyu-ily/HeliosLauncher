@@ -76,6 +76,10 @@ javaPathDesc = "The path should end with <strong>{pathSuffix}</strong>."
 javaJvmOptsTitle = "Additional JVM Options"
 javaJvmOptsDesc = "Options provided to the JVM at runtime. <em>-Xms</em> and <em>-Xmx</em> should not be included."
 
+[ejs.landing.heroVideo]
+pause = "Pause background video"
+unmute = "Unmute background video"
+
 [ejs.login]
 loginCancelText = "Cancel"
 loginSubheader = "MINECRAFT LOGIN"
@@ -226,6 +230,15 @@ current = "Current account"
 [js.landing.accountCopy]
 copied = "Copied"
 failed = "Unable to copy"
+
+[js.landing.heroVideo]
+play = "Play background video"
+pause = "Pause background video"
+mute = "Mute background video"
+unmute = "Unmute background video"
+caching = "Caching background video…"
+cacheFailed = "Unable to cache background video"
+unavailable = "Background video is unavailable"
 
 [js.landing.selectedServer]
 noSelection = "No Server Selected"

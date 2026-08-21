@@ -143,6 +143,9 @@ async function showMainUI(data){
                 currentView = VIEWS.landing
                 syncLauncherShell(VIEWS.landing)
                 $(VIEWS.landing).fadeIn(1000)
+                if(typeof syncHeroMediaPlayback === 'function'){
+                    syncHeroMediaPlayback()
+                }
             } else {
                 loginOptionsCancelEnabled(false)
                 loginOptionsViewOnLoginSuccess = VIEWS.landing

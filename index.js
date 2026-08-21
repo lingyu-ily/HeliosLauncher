@@ -2,16 +2,29 @@ const remoteMain = require('@electron/remote/main')
 remoteMain.initialize()
 
 // Requirements
-const { app, BrowserWindow, ipcMain, Menu, session, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, Menu, protocol, session, shell } = require('electron')
 const autoUpdater                       = require('electron-updater').autoUpdater
 const ejse                              = require('ejs-electron')
 const fs                                = require('fs')
 const isDev                             = require('./app/assets/js/isdev')
 const path                              = require('path')
 const semver                            = require('semver')
+const { Readable }                      = require('stream')
 const { pathToFileURL }                 = require('url')
 const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, SHELL_OPCODE } = require('./app/assets/js/ipcconstants')
 const LangLoader                        = require('./app/assets/js/langloader')
+
+const HERO_VIDEO_SCHEME = 'maplecraft-video'
+
+protocol.registerSchemesAsPrivileged([{
+    scheme: HERO_VIDEO_SCHEME,
+    privileges: {
+        secure: true,
+        standard: true,
+        stream: true,
+        supportFetchAPI: true
+    }
+}])
 
 // Setup Lang
 LangLoader.setupLanguage()
@@ -357,6 +370,85 @@ function configureYouTubeEmbedIdentity(){
     })
 }
 
+function configureHeroVideoProtocol(){
+    const cacheRoot = path.resolve(app.getPath('userData'), 'hero-video-cache')
+    const cacheRootPrefix = `${cacheRoot}${path.sep}`
+
+    protocol.handle(HERO_VIDEO_SCHEME, async request => {
+        const requestUrl = new URL(request.url)
+        const pathParts = requestUrl.pathname.split('/').filter(Boolean)
+        const cacheId = pathParts[0]
+        const fileName = pathParts[1]
+
+        if(requestUrl.hostname !== 'cache'
+            || pathParts.length !== 2
+            || !/^[a-f\d]{32}$/.test(cacheId)
+            || !/^video\.(?:mp4|webm)$/.test(fileName)){
+            return new Response(null, { status: 404 })
+        }
+
+        const filePath = path.resolve(cacheRoot, cacheId, fileName)
+        if(!filePath.startsWith(cacheRootPrefix)){
+            return new Response(null, { status: 403 })
+        }
+
+        let fileStat
+        try {
+            fileStat = await fs.promises.stat(filePath)
+        } catch(error) {
+            if(error.code === 'ENOENT'){
+                return new Response(null, { status: 404 })
+            }
+            throw error
+        }
+        if(!fileStat.isFile()){
+            return new Response(null, { status: 404 })
+        }
+
+        const headers = new Headers({
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'no-store',
+            'Content-Type': fileName.endsWith('.webm') ? 'video/webm' : 'video/mp4'
+        })
+        const rangeHeader = request.headers.get('range')
+        const rangeMatch = rangeHeader?.match(/^bytes=(\d*)-(\d*)$/)
+        let start = 0
+        let end = fileStat.size - 1
+
+        if(rangeHeader != null){
+            if(rangeMatch == null || (rangeMatch[1] === '' && rangeMatch[2] === '')){
+                headers.set('Content-Range', `bytes */${fileStat.size}`)
+                return new Response(null, { status: 416, headers })
+            }
+            if(rangeMatch[1] === ''){
+                const suffixLength = Number(rangeMatch[2])
+                if(!Number.isSafeInteger(suffixLength) || suffixLength <= 0){
+                    headers.set('Content-Range', `bytes */${fileStat.size}`)
+                    return new Response(null, { status: 416, headers })
+                }
+                start = Math.max(fileStat.size - suffixLength, 0)
+            } else {
+                start = Number(rangeMatch[1])
+                end = rangeMatch[2] === '' ? end : Math.min(Number(rangeMatch[2]), end)
+            }
+            if(!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= fileStat.size || end < start){
+                headers.set('Content-Range', `bytes */${fileStat.size}`)
+                return new Response(null, { status: 416, headers })
+            }
+            headers.set('Content-Range', `bytes ${start}-${end}/${fileStat.size}`)
+        }
+
+        headers.set('Content-Length', `${end - start + 1}`)
+        const status = rangeHeader == null ? 200 : 206
+        if(request.method === 'HEAD'){
+            return new Response(null, { status, headers })
+        }
+        const body = Readable.toWeb(fs.createReadStream(filePath, { start, end }))
+        return new Response(body, { status, headers })
+    })
+}
+
+app.on('ready', configureHeroVideoProtocol)
 app.on('ready', configureYouTubeEmbedIdentity)
 app.on('ready', createWindow)
 app.on('ready', createMenu)

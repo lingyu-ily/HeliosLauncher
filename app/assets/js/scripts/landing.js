@@ -9,7 +9,7 @@ const gotClient                      = require('got')
 const nodePath                       = require('path')
 const { Transform: StreamTransform } = require('stream')
 const { pipeline: streamPipeline }   = require('stream/promises')
-const { URL: NodeURL, pathToFileURL: filePathToURL } = require('url')
+const { URL: NodeURL }               = require('url')
 const {
     MojangRestAPI,
     getServerStatus
@@ -762,6 +762,12 @@ function heroVideoCacheDirectory(serverId){
     return nodePath.join(ConfigManager.getLauncherDirectory(), 'hero-video-cache', safeId)
 }
 
+function heroVideoCacheURL(serverId, filePath){
+    const safeId = nodeCrypto.createHash('sha256').update(serverId).digest('hex').slice(0, 32)
+    const fileName = nodePath.basename(filePath)
+    return `maplecraft-video://cache/${safeId}/${fileName}`
+}
+
 function heroVideoCacheIdentity(descriptor){
     return {
         url: descriptor.url,
@@ -904,7 +910,7 @@ async function prepareFileHeroVideo(requestSequence){
         if(!filePath || requestSequence !== heroPresentationSequence || activeHeroMedia !== media){
             return
         }
-        launcherHeroVideo.src = filePathToURL(filePath).toString()
+        launcherHeroVideo.src = heroVideoCacheURL(media.serverId, filePath)
         launcherHeroVideo.muted = heroMediaMuted
         launcherHeroVideo.load()
         await new Promise((resolve, reject) => {

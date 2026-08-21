@@ -239,9 +239,9 @@ function createWindow() {
 
     win = new BrowserWindow({
         title: LangLoader.queryEJS('app.title'),
-        width: 1280,
+        width: 1180,
         height: 720,
-        minWidth: 1280,
+        minWidth: 1180,
         minHeight: 720,
         icon: getPlatformIcon('SealCircle'),
         frame: true,

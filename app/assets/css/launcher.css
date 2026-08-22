@@ -3123,12 +3123,10 @@ input:checked + .toggleSwitchSlider:before {
 #overlayContainer {
     position: absolute;
     z-index: 500;
-    top: 22px;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: calc(100% - 22px);
     background: rgba(0, 0, 0, 0.50);
 }
 
@@ -3489,11 +3487,10 @@ input:checked + .toggleSwitchSlider:before {
 #loadingContainer {
     position: absolute;
     z-index: 400;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: calc(100% - 22px);
 }
 
 /* Loading content container. */

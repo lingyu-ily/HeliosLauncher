@@ -4880,6 +4880,98 @@ button:disabled {
     cursor: default;
 }
 
+#launcherHeroVolumeControl {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+}
+
+#launcherHeroVolumePopover {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    width: 36px;
+    height: 112px;
+    box-sizing: border-box;
+    border: 1px solid #aaa5a0;
+    background: rgba(17, 16, 15, 0.94);
+    box-shadow: 0 7px 18px rgba(0, 0, 0, 0.5), inset 0 -2px rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px) scaleY(0.78);
+    transform-origin: bottom center;
+    transition: opacity 140ms ease, transform 140ms ease, visibility 0s linear 140ms;
+    visibility: hidden;
+}
+
+#launcherHeroVolumePopover::after {
+    position: absolute;
+    right: -1px;
+    bottom: -7px;
+    left: -1px;
+    height: 7px;
+    content: "";
+}
+
+#launcherHeroVolumeControl:not([data-disabled]):hover #launcherHeroVolumePopover,
+#launcherHeroVolumeControl:not([data-disabled]):focus-within #launcherHeroVolumePopover {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scaleY(1);
+    transition-delay: 0s;
+    visibility: visible;
+}
+
+#launcherHeroVolumeSlider {
+    --hero-volume-percent: 0%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 82px;
+    height: 18px;
+    padding: 0;
+    margin: -9px 0 0 -41px;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+    transform: rotate(-90deg);
+}
+
+#launcherHeroVolumeSlider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    border: 1px solid #1a1918;
+    border-radius: 0;
+    background: linear-gradient(to right, #70b857 0 var(--hero-volume-percent), #514d49 var(--hero-volume-percent) 100%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+#launcherHeroVolumeSlider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    appearance: none;
+    border: 1px solid #fff;
+    border-radius: 0;
+    background: #c9c5bf;
+    box-shadow: inset 0 -2px #77716b, 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+#launcherHeroVolumeSlider:hover::-webkit-slider-thumb {
+    background: #fff;
+}
+
+#launcherHeroVolumeSlider:focus-visible {
+    outline: 2px solid var(--mc-focus);
+    outline-offset: 3px;
+}
+
+#launcherHeroVolumeSlider:disabled {
+    cursor: default;
+    opacity: 0.45;
+}
+
 #launcherHeroMediaStatus {
     max-width: min(280px, 42vw);
     overflow: hidden;

@@ -83,6 +83,7 @@ javaJvmOptsDesc = "Options provided to the JVM at runtime. <em>-Xms</em> and <em
 [ejs.landing.heroVideo]
 pause = "Pause background video"
 unmute = "Unmute background video"
+volume = "Background video volume"
 
 [ejs.login]
 loginCancelText = "Cancel"
@@ -240,6 +241,8 @@ play = "Play background video"
 pause = "Pause background video"
 mute = "Mute background video"
 unmute = "Unmute background video"
+volumeMuted = "Muted"
+volumeValue = "{volume}%"
 caching = "Caching background video…"
 cacheFailed = "Unable to cache background video"
 unavailable = "Background video is unavailable"

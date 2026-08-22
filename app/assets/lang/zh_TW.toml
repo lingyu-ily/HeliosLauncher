@@ -83,6 +83,7 @@ javaJvmOptsDesc = "執行時傳遞給 JVM 的選項；不應包含 <em>-Xms</em>
 [ejs.landing.heroVideo]
 pause = "暫停背景影片"
 unmute = "取消背景影片靜音"
+volume = "背景影片音量"
 
 [ejs.login]
 loginCancelText = "取消"
@@ -239,6 +240,8 @@ play = "播放背景影片"
 pause = "暫停背景影片"
 mute = "背景影片靜音"
 unmute = "取消背景影片靜音"
+volumeMuted = "靜音"
+volumeValue = "{volume}%"
 caching = "正在快取背景影片…"
 cacheFailed = "無法快取背景影片"
 unavailable = "背景影片目前無法播放"

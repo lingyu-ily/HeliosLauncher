@@ -66,7 +66,9 @@ const launcherHeroVideo       = document.getElementById('launcherHeroVideo')
 const launcherHeroYouTube     = document.getElementById('launcherHeroYouTube')
 const launcherHeroMediaControls = document.getElementById('launcherHeroMediaControls')
 const launcherHeroPlayToggle  = document.getElementById('launcherHeroPlayToggle')
+const launcherHeroVolumeControl = document.getElementById('launcherHeroVolumeControl')
 const launcherHeroMuteToggle  = document.getElementById('launcherHeroMuteToggle')
+const launcherHeroVolumeSlider = document.getElementById('launcherHeroVolumeSlider')
 const launcherHeroMediaStatus = document.getElementById('launcherHeroMediaStatus')
 const launcherHeroContent     = document.getElementById('image_seal_container')
 const launcherHeroLogo        = document.getElementById('image_seal')
@@ -86,6 +88,8 @@ let activeHeroMedia = null
 let activeHeroMediaReady = false
 let activeHeroMediaDownload = null
 let activeHeroMediaPromise = null
+let heroMediaVolume = ConfigManager.getHeroVideoVolume()
+let heroMediaLastVolume = heroMediaVolume
 let heroMediaMuted = true
 
 const loggerLanding = LoggerUtil.getLogger('Landing')
@@ -698,6 +702,11 @@ function setHeroMediaStatus(message = ''){
 function updateHeroMediaControls(){
     const configured = activeHeroMedia != null
     const playRequested = ConfigManager.getPlayHeroVideos()
+    const disabled = !configured || !activeHeroMediaReady
+    const effectiveVolume = heroMediaMuted ? 0 : heroMediaVolume
+    const volumeText = heroMediaMuted
+        ? Lang.queryJS('landing.heroVideo.volumeMuted')
+        : Lang.queryJS('landing.heroVideo.volumeValue', { volume: effectiveVolume })
     launcherHeroMediaControls.hidden = !configured
     launcherHeroPlayToggle.textContent = playRequested ? 'Ⅱ' : '▶'
     launcherHeroPlayToggle.setAttribute('aria-pressed', playRequested.toString())
@@ -705,16 +714,31 @@ function updateHeroMediaControls(){
     launcherHeroMuteToggle.textContent = heroMediaMuted ? '🔇' : '🔊'
     launcherHeroMuteToggle.setAttribute('aria-pressed', heroMediaMuted.toString())
     launcherHeroMuteToggle.setAttribute('aria-label', Lang.queryJS(`landing.heroVideo.${heroMediaMuted ? 'unmute' : 'mute'}`))
-    launcherHeroMuteToggle.disabled = !configured || !activeHeroMediaReady
+    launcherHeroMuteToggle.disabled = disabled
+    launcherHeroVolumeSlider.disabled = disabled
+    launcherHeroVolumeSlider.value = effectiveVolume
+    launcherHeroVolumeSlider.style.setProperty('--hero-volume-percent', `${effectiveVolume}%`)
+    launcherHeroVolumeSlider.setAttribute('aria-valuetext', volumeText)
+    launcherHeroVolumeSlider.title = volumeText
+    launcherHeroVolumeControl.toggleAttribute('data-disabled', disabled)
 }
 
-function sendYouTubeCommand(func){
+function sendYouTubeCommand(func, args = []){
     const frame = launcherHeroYouTube.querySelector('iframe')
     frame?.contentWindow?.postMessage(JSON.stringify({
         event: 'command',
         func,
-        args: []
+        args
     }), 'https://www.youtube.com')
+}
+
+function syncHeroMediaAudio(){
+    launcherHeroVideo.volume = heroMediaVolume / 100
+    launcherHeroVideo.muted = heroMediaMuted
+    if(activeHeroMedia?.descriptor.type === 'youtube'){
+        sendYouTubeCommand('setVolume', [heroMediaVolume])
+        sendYouTubeCommand(heroMediaMuted ? 'mute' : 'unMute')
+    }
 }
 
 function heroMediaCanPlay(){
@@ -728,9 +752,8 @@ function heroMediaCanPlay(){
 function syncHeroMediaPlayback(){
     updateHeroMediaControls()
     const shouldPlay = activeHeroMediaReady && heroMediaCanPlay()
-    launcherHeroVideo.muted = heroMediaMuted
+    syncHeroMediaAudio()
     if(activeHeroMedia?.descriptor.type === 'youtube'){
-        sendYouTubeCommand(heroMediaMuted ? 'mute' : 'unMute')
         if(shouldPlay){
             sendYouTubeCommand('playVideo')
             launcherHeroYouTube.setAttribute('visible', '')
@@ -1012,7 +1035,29 @@ launcherHeroPlayToggle.onclick = () => {
 
 launcherHeroMuteToggle.onclick = () => {
     heroMediaMuted = !heroMediaMuted
-    syncHeroMediaPlayback()
+    updateHeroMediaControls()
+    syncHeroMediaAudio()
+}
+
+launcherHeroVolumeSlider.oninput = () => {
+    const volume = Number.parseInt(launcherHeroVolumeSlider.value)
+    if(volume === 0){
+        heroMediaVolume = heroMediaLastVolume
+        heroMediaMuted = true
+    } else {
+        heroMediaVolume = volume
+        heroMediaMuted = false
+    }
+    updateHeroMediaControls()
+    syncHeroMediaAudio()
+}
+
+launcherHeroVolumeSlider.onchange = () => {
+    if(!heroMediaMuted){
+        heroMediaLastVolume = heroMediaVolume
+        ConfigManager.setHeroVideoVolume(heroMediaVolume)
+    }
+    ConfigManager.save()
 }
 
 async function applyServerPresentation(serv){

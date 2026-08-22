@@ -84,7 +84,12 @@
                     </div>
                     <div id="launcherHeroMediaControls" hidden>
                         <button id="launcherHeroPlayToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.pause') %>">Ⅱ</button>
-                        <button id="launcherHeroMuteToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.unmute') %>">🔇</button>
+                        <div id="launcherHeroVolumeControl" data-disabled>
+                            <button id="launcherHeroMuteToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.unmute') %>">🔇</button>
+                            <div id="launcherHeroVolumePopover">
+                                <input id="launcherHeroVolumeSlider" type="range" min="0" max="100" step="1" value="0" aria-label="<%- lang('landing.heroVideo.volume') %>">
+                            </div>
+                        </div>
                         <span id="launcherHeroMediaStatus" role="status" aria-live="polite"></span>
                     </div>
                 </section>

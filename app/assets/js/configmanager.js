@@ -87,6 +87,7 @@ const DEFAULT_CONFIG = {
         launcher: {
             allowPrerelease: false,
             playHeroVideos: true,
+            heroVideoVolume: 100,
             dataDirectory: dataPath
         }
     },
@@ -840,4 +841,30 @@ exports.getPlayHeroVideos = function(def = false){
  */
 exports.setPlayHeroVideos = function(playHeroVideos){
     config.settings.launcher.playHeroVideos = Boolean(playHeroVideos)
+}
+
+/**
+ * Retrieve the preferred non-zero volume for server hero videos.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {number} The volume percentage, clamped between 1 and 100.
+ */
+exports.getHeroVideoVolume = function(def = false){
+    const value = def ? DEFAULT_CONFIG.settings.launcher.heroVideoVolume : config.settings.launcher.heroVideoVolume
+    const numericValue = Number(value)
+    return Number.isFinite(numericValue)
+        ? Math.min(100, Math.max(1, Math.round(numericValue)))
+        : DEFAULT_CONFIG.settings.launcher.heroVideoVolume
+}
+
+/**
+ * Change the preferred non-zero volume for server hero videos.
+ *
+ * @param {number} heroVideoVolume The new volume percentage.
+ */
+exports.setHeroVideoVolume = function(heroVideoVolume){
+    const numericValue = Number(heroVideoVolume)
+    config.settings.launcher.heroVideoVolume = Number.isFinite(numericValue)
+        ? Math.min(100, Math.max(1, Math.round(numericValue)))
+        : DEFAULT_CONFIG.settings.launcher.heroVideoVolume
 }

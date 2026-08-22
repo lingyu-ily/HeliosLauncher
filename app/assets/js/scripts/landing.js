@@ -244,8 +244,7 @@ document.getElementById('settingsMediaButton').onclick = async e => {
         document.querySelector('.settingsNavItem[selected]')?.focus()
         return
     }
-    await prepareSettings()
-    switchView(getCurrentView(), VIEWS.settings)
+    await openLauncherSettings()
 }
 
 const defaultAccountAvatar = 'assets/images/SealCircle.png'
@@ -453,10 +452,7 @@ accountMenuManage.onclick = async () => {
         settingsNavItemListener(document.getElementById('settingsNavAccount'))
         return
     }
-    await prepareSettings()
-    switchView(getCurrentView(), VIEWS.settings, 500, 500, () => {
-        settingsNavItemListener(document.getElementById('settingsNavAccount'), false)
-    })
+    await openLauncherSettings('settingsNavAccount')
 }
 
 // Bind selected account
@@ -560,16 +556,25 @@ function renderServerSidebar(distro){
         copy.append(name, version)
         item.append(icon, copy)
         item.onclick = async () => {
+            const requestSequence = beginLauncherShellNavigation()
             if(getCurrentView() === VIEWS.settings){
-                switchView(getCurrentView(), VIEWS.landing, 200, 200, () => {}, async () => {
-                    setLandingSection('play')
+                let serverChanged = false
+                switchLauncherShellView(VIEWS.landing, () => {
+                    if(!setLandingSection('play')){
+                        return false
+                    }
                     if(ConfigManager.getSelectedServer() !== server.id){
                         if(updateSelectedServer(serv) === false){
-                            return
+                            return false
                         }
+                        serverChanged = true
+                    }
+                    return true
+                }, async () => {
+                    if(serverChanged){
                         await refreshServerStatus(true)
                     }
-                })
+                }, requestSequence)
                 return
             }
             if(ConfigManager.getSelectedServer() === server.id){
@@ -1669,6 +1674,7 @@ function setLandingSection(section){
     newsActive = section === 'globalUpdates' ? newsStates.global : (section === 'serverUpdates' ? newsStates.server : null)
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     workspaceScroll.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
+    playLauncherSectionEnter(sections[section])
 
     if(section === 'mods'){
         void prepareLandingModsView()
@@ -1687,10 +1693,9 @@ function setLandingSection(section){
 }
 
 function openLandingSection(section){
+    const requestSequence = beginLauncherShellNavigation()
     if(getCurrentView() === VIEWS.settings){
-        switchView(getCurrentView(), VIEWS.landing, 200, 200, () => {}, () => {
-            setLandingSection(section)
-        })
+        switchLauncherShellView(VIEWS.landing, () => setLandingSection(section), () => {}, requestSequence)
     } else {
         setLandingSection(section)
     }
@@ -1702,9 +1707,9 @@ document.getElementById('landingJavaButton').onclick = () => openLandingSection(
 document.getElementById('landingHomeButton').onclick = () => openLandingSection('home')
 document.getElementById('landingUpdatesButton').onclick = () => openLandingSection('serverUpdates')
 document.getElementById('newsButton').onclick = () => openLandingSection('globalUpdates')
-document.getElementById('newsPreviewAction').onclick = () => setLandingSection('serverUpdates')
-document.getElementById('newsBackButton').onclick = () => setLandingSection('play')
-document.getElementById('globalNewsBackButton').onclick = () => setLandingSection('home')
+document.getElementById('newsPreviewAction').onclick = () => openLandingSection('serverUpdates')
+document.getElementById('newsBackButton').onclick = () => openLandingSection('play')
+document.getElementById('globalNewsBackButton').onclick = () => openLandingSection('home')
 
 document.getElementById('launcherGameTabs').addEventListener('keydown', event => {
     if(!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)){

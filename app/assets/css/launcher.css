@@ -4278,15 +4278,15 @@ button:disabled {
     background: #111;
 }
 
-.landingSectionView:not([hidden]) {
-    animation: landingSectionEnter 200ms ease;
+[launcher-entering] {
+    animation: launcherSectionEnter 200ms ease;
 }
 
 .landingSectionView[hidden] {
     display: none !important;
 }
 
-@keyframes landingSectionEnter {
+@keyframes launcherSectionEnter {
     from {
         opacity: 0;
         transform: translateY(5px);
@@ -5957,6 +5957,10 @@ button:disabled {
     overflow-y: auto;
     padding: 36px 48px 72px;
     color: #f7f7f7;
+}
+
+.settingsTab[hidden] {
+    display: none !important;
 }
 
 .settingsTabHeader {

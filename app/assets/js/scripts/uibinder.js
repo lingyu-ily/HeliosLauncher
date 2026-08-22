@@ -26,12 +26,75 @@ const VIEWS = {
 }
 
 const LAUNCHER_SHELL_VIEWS = new Set([VIEWS.landing, VIEWS.settings])
+const launcherSectionEnterState = new WeakMap()
+let launcherShellNavigationSequence = 0
 
 // The currently shown view container.
 let currentView
 
 function isLauncherShellView(view){
     return LAUNCHER_SHELL_VIEWS.has(view)
+}
+
+function beginLauncherShellNavigation(){
+    return ++launcherShellNavigationSequence
+}
+
+function playLauncherSectionEnter(element, animate = true){
+    const previous = launcherSectionEnterState.get(element)
+    if(previous != null){
+        clearTimeout(previous.timer)
+        element.removeEventListener('animationend', previous.handler)
+        launcherSectionEnterState.delete(element)
+    }
+    element.removeAttribute('launcher-entering')
+    if(!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+        return
+    }
+    void element.offsetWidth
+    element.setAttribute('launcher-entering', '')
+    const cleanup = () => {
+        element.removeAttribute('launcher-entering')
+        const active = launcherSectionEnterState.get(element)
+        if(active?.handler === handler){
+            clearTimeout(active.timer)
+            launcherSectionEnterState.delete(element)
+        }
+        element.removeEventListener('animationend', handler)
+    }
+    const handler = event => {
+        if(event.target === element){
+            cleanup()
+        }
+    }
+    const timer = setTimeout(cleanup, 250)
+    launcherSectionEnterState.set(element, { handler, timer })
+    element.addEventListener('animationend', handler)
+}
+
+function getLauncherShellTransitionTarget(view){
+    if(view === VIEWS.landing){
+        return document.querySelector('#landingWorkspaceScroll .landingSectionView:not([hidden])')
+    }
+    if(view === VIEWS.settings){
+        return document.querySelector('#settingsContainerRight .settingsTab:not([hidden])')
+    }
+    return document.querySelector(view)
+}
+
+function canSwitchView(current, next){
+    if(current === VIEWS.landing && next !== VIEWS.landing && typeof getLandingSection === 'function'){
+        if(getLandingSection() === 'mods' && typeof commitLandingModsView === 'function' && !commitLandingModsView()){
+            return false
+        }
+        if(getLandingSection() === 'java' && typeof commitLandingJavaView === 'function' && !commitLandingJavaView()){
+            return false
+        }
+    }
+    if(current === VIEWS.settings && next !== VIEWS.settings && typeof saveSettingsBeforeExit === 'function' && !saveSettingsBeforeExit()){
+        return false
+    }
+    return true
 }
 
 function syncLauncherShell(view){
@@ -52,7 +115,80 @@ function syncLauncherShell(view){
     if(settingsSelected){
         homeButton?.removeAttribute('selected')
         newsButton?.removeAttribute('selected')
+        if(typeof updateServerSidebarSelection === 'function'){
+            updateServerSidebarSelection(null)
+        }
     }
+}
+
+/**
+ * Switch between the persistent Landing and Settings views. The target is
+ * prepared while hidden, then revealed with the shared section animation.
+ */
+function switchLauncherShellView(next, prepareNext = () => true, onNextShown = () => {}, requestSequence = beginLauncherShellNavigation()){
+    const current = getCurrentView()
+    if(!isLauncherShellView(current) || !isLauncherShellView(next)){
+        return switchView(current, next, 200, 200, prepareNext, onNextShown)
+    }
+    if(requestSequence !== launcherShellNavigationSequence || !canSwitchView(current, next)){
+        return false
+    }
+    if(current === next){
+        return prepareNext() !== false
+    }
+
+    if(typeof closeAccountMenu === 'function'){
+        closeAccountMenu(false)
+    }
+
+    const currentElement = document.querySelector(current)
+    const nextElement = document.querySelector(next)
+    $(currentElement).stop(true, true).hide()
+    $(nextElement).stop(true, true).hide()
+
+    try {
+        if(prepareNext() === false || requestSequence !== launcherShellNavigationSequence){
+            syncLauncherShell(current)
+            $(currentElement).show()
+            return false
+        }
+    } catch(err) {
+        loggerUICore.error('Failed to prepare launcher view transition.', err)
+        syncLauncherShell(current)
+        $(currentElement).show()
+        return false
+    }
+
+    currentView = next
+    syncLauncherShell(next)
+    $(nextElement).show()
+    playLauncherSectionEnter(getLauncherShellTransitionTarget(next) || nextElement)
+    if(typeof syncHeroMediaPlayback === 'function'){
+        syncHeroMediaPlayback()
+    }
+    Promise.resolve(onNextShown()).catch(err => {
+        loggerUICore.error('Failed after launcher view transition.', err)
+    })
+    return true
+}
+
+async function openLauncherSettings(settingsNavId = null){
+    const requestSequence = beginLauncherShellNavigation()
+    try {
+        await prepareSettings()
+    } catch(err) {
+        loggerUICore.error('Failed to prepare Settings.', err)
+        return false
+    }
+    if(requestSequence !== launcherShellNavigationSequence){
+        return false
+    }
+    return switchLauncherShellView(VIEWS.settings, () => {
+        if(settingsNavId != null){
+            settingsNavItemListener(document.getElementById(settingsNavId), false)
+        }
+        return true
+    }, () => {}, requestSequence)
 }
 
 /**
@@ -68,22 +204,8 @@ function syncLauncherShell(view){
  * fades in.
  */
 function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, onCurrentFade = () => {}, onNextFade = () => {}){
-    if(current === VIEWS.landing && next !== VIEWS.landing && typeof getLandingSection === 'function'){
-        if(getLandingSection() === 'mods' && typeof commitLandingModsView === 'function'){
-            if(!commitLandingModsView()){
-                return false
-            }
-        }
-        if(getLandingSection() === 'java' && typeof commitLandingJavaView === 'function'){
-            if(!commitLandingJavaView()){
-                return false
-            }
-        }
-    }
-    if(current === VIEWS.settings && next !== VIEWS.settings && typeof saveSettingsBeforeExit === 'function'){
-        if(!saveSettingsBeforeExit()){
-            return false
-        }
+    if(!canSwitchView(current, next)){
+        return false
     }
     if(current !== next && typeof closeAccountMenu === 'function'){
         closeAccountMenu(false)

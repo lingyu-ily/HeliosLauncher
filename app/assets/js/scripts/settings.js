@@ -201,6 +201,13 @@ function settingsTabScrollListener(e){
 function setupSettingsTabs(){
     const navItems = Array.from(document.getElementsByClassName('settingsNavItem'))
     const tabList = document.getElementById('settingsNavItemsContent')
+    const settingsTabs = Array.from(document.getElementsByClassName('settingsTab'))
+
+    for(const tab of settingsTabs){
+        const selected = tab.id === selectedSettingsTab
+        tab.hidden = !selected
+        tab.setAttribute('aria-hidden', (!selected).toString())
+    }
 
     navItems.forEach((val) => {
         if(val.hasAttribute('rSc')){
@@ -251,6 +258,9 @@ function setupSettingsTabs(){
  */
 function settingsNavItemListener(ele, fade = true){
     if(ele.hasAttribute('selected')){
+        const selectedTab = document.getElementById(ele.getAttribute('rSc'))
+        selectedTab.hidden = false
+        selectedTab.setAttribute('aria-hidden', 'false')
         ele.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         return
     }
@@ -264,38 +274,20 @@ function settingsNavItemListener(ele, fade = true){
     ele.setAttribute('aria-selected', 'true')
     ele.tabIndex = 0
     ele.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-    let prevTab = selectedSettingsTab
+    const prevTab = selectedSettingsTab
     selectedSettingsTab = ele.getAttribute('rSc')
 
-    document.getElementById(prevTab).onscroll = null
-    document.getElementById(selectedSettingsTab).onscroll = settingsTabScrollListener
-
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const duration = fade && !reduceMotion ? 200 : 0
-
-    if(duration > 0){
-        $(`#${prevTab}`).fadeOut(duration, () => {
-            $(`#${selectedSettingsTab}`).fadeIn({
-                duration,
-                start: () => {
-                    settingsTabScrollListener({
-                        target: document.getElementById(selectedSettingsTab)
-                    })
-                }
-            })
-        })
-    } else {
-        $(`#${prevTab}`).hide(0, () => {
-            $(`#${selectedSettingsTab}`).show({
-                duration: 0,
-                start: () => {
-                    settingsTabScrollListener({
-                        target: document.getElementById(selectedSettingsTab)
-                    })
-                }
-            })
-        })
-    }
+    const previousElement = document.getElementById(prevTab)
+    const selectedElement = document.getElementById(selectedSettingsTab)
+    previousElement.onscroll = null
+    previousElement.hidden = true
+    previousElement.setAttribute('aria-hidden', 'true')
+    previousElement.removeAttribute('launcher-entering')
+    selectedElement.hidden = false
+    selectedElement.setAttribute('aria-hidden', 'false')
+    selectedElement.onscroll = settingsTabScrollListener
+    settingsTabScrollListener({ target: selectedElement })
+    playLauncherSectionEnter(selectedElement, fade)
 }
 
 /**

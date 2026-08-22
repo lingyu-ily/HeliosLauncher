@@ -14,7 +14,7 @@
         </div>
     </header>
     <div id="settingsContainerRight">
-        <div id="settingsTabAccount" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavAccount" tabindex="0">
+        <div id="settingsTabAccount" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavAccount" aria-hidden="false" tabindex="0">
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.tabAccountHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.tabAccountHeaderDesc') %></span>
@@ -60,7 +60,7 @@
                 </div>
             </div>
         </div>
-        <div id="settingsTabMinecraft" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavMinecraft" tabindex="0" style="display: none;">
+        <div id="settingsTabMinecraft" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavMinecraft" aria-hidden="true" tabindex="0" hidden>
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.minecraftTabHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.minecraftTabHeaderDesc') %></span>
@@ -108,7 +108,7 @@
                 </div>
             </div>
         </div>
-        <div id="settingsTabLauncher" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavLauncher" tabindex="0" style="display: none;">
+        <div id="settingsTabLauncher" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavLauncher" aria-hidden="true" tabindex="0" hidden>
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.launcherTabHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.launcherTabHeaderDesc') %></span>
@@ -145,7 +145,7 @@
                 <div class="settingsFileSelDesc"><%- lang('settings.dataDirectoryDesc') %></div>
             </div>
         </div>
-        <div id="settingsTabAbout" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavAbout" tabindex="0" style="display: none;">
+        <div id="settingsTabAbout" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavAbout" aria-hidden="true" tabindex="0" hidden>
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.aboutTabHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.aboutTabHeaderDesc') %></span>
@@ -190,7 +190,7 @@
                 </div>
             </div>
         </div>
-        <div id="settingsTabUpdate" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavUpdate" tabindex="0" style="display: none;">
+        <div id="settingsTabUpdate" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavUpdate" aria-hidden="true" tabindex="0" hidden>
             <div class="settingsTabHeader">
                 <span class="settingsTabHeaderText"><%- lang('settings.launcherUpdatesHeaderText') %></span>
                 <span class="settingsTabHeaderDesc"><%- lang('settings.launcherUpdatesHeaderDesc') %></span>

@@ -118,10 +118,7 @@ function showUpdateUI(info){
             settingsNavItemListener(document.getElementById('settingsNavUpdate'))
             return
         }
-        await prepareSettings()
-        switchView(getCurrentView(), VIEWS.settings, 200, 200, () => {
-            settingsNavItemListener(document.getElementById('settingsNavUpdate'), false)
-        })
+        await openLauncherSettings('settingsNavUpdate')
     }
 }
 

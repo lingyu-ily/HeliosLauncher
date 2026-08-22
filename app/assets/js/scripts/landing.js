@@ -536,7 +536,7 @@ function renderServerSidebar(distro){
     for(const serv of distro.servers){
         const server = serv.rawServer
         const item = document.createElement('button')
-        const selected = server.id === selectedId
+        const selected = serverLandingSections.has(getLandingSection()) && server.id === selectedId
         item.type = 'button'
         item.className = 'serverSidebarItem'
         item.setAttribute('role', 'option')
@@ -573,6 +573,9 @@ function renderServerSidebar(distro){
                 return
             }
             if(ConfigManager.getSelectedServer() === server.id){
+                if(getLandingSection() === 'home' || getLandingSection() === 'globalUpdates'){
+                    setLandingSection('play')
+                }
                 item.focus()
                 return
             }
@@ -1056,17 +1059,18 @@ function updateSelectedServer(serv){
         selectedServerVersion.textContent = `${serv.rawServer.minecraftVersion} · ${serv.rawServer.version}`
         selectedServerIcon.src = serv.rawServer.icon
         selectedServerIcon.alt = serv.rawServer.name
-        updateServerSidebarSelection(serv.rawServer.id)
+        updateServerSidebarSelection(serverLandingSections.has(getLandingSection()) ? serv.rawServer.id : null)
     } else {
         selectedServerName.textContent = Lang.queryJS('landing.selectedServer.noSelection')
         selectedServerVersion.textContent = ''
         selectedServerIcon.src = 'assets/images/SealCircle.png'
         selectedServerIcon.alt = ''
-        updateServerSidebarSelection('')
+        updateServerSidebarSelection(null)
     }
     setLaunchEnabled(serv != null)
     void applyServerPresentation(serv)
-    void initNews()
+    void initGlobalNews()
+    void initServerNews()
     if(getCurrentView() === VIEWS.landing && getLandingSection() === 'mods'){
         void prepareLandingModsView()
     }
@@ -1560,25 +1564,60 @@ async function dlAsync(login = true) {
  * News Loading Functions
  */
 
-// DOM Cache
-const newsContent                   = document.getElementById('newsContent')
-const newsArticleTitle              = document.getElementById('newsArticleTitle')
-const newsArticleDate               = document.getElementById('newsArticleDate')
-const newsArticleAuthor             = document.getElementById('newsArticleAuthor')
-const newsArticleComments           = document.getElementById('newsArticleComments')
-const newsNavigationStatus          = document.getElementById('newsNavigationStatus')
-const newsArticleContentScrollable  = document.getElementById('newsArticleContentScrollable')
-const nELoadSpan                    = document.getElementById('nELoadSpan')
-
-let newsActive = false
+const serverLandingSections = new Set(['play', 'mods', 'java', 'serverUpdates'])
+const newsStates = {}
+let newsActive = null
 let activeLandingSection = 'play'
+
+function createNewsState(scope, rootId, cardsId){
+    const root = document.getElementById(rootId)
+    const query = selector => root.querySelector(selector)
+    const state = {
+        scope,
+        root,
+        cards: cardsId == null ? null : document.getElementById(cardsId),
+        content: query('[data-news-content]'),
+        title: query('[data-news-title]'),
+        date: query('[data-news-date]'),
+        author: query('[data-news-author]'),
+        comments: query('[data-news-comments]'),
+        navigation: query('[data-news-navigation]'),
+        article: query('[data-news-article]'),
+        previous: query('[data-news-previous]'),
+        next: query('[data-news-next]'),
+        errors: query('[data-news-errors]'),
+        loading: query('[data-news-loading]'),
+        loadingLabel: query('[data-news-loading-label]'),
+        failed: query('[data-news-failed]'),
+        retry: query('[data-news-retry]'),
+        empty: query('[data-news-empty]'),
+        articles: null,
+        context: { serverId: scope === 'global' ? '__global__' : '', source: '' },
+        contextKey: '',
+        requestSequence: 0,
+        loadingTimer: null,
+        loadingPromise: null,
+        initialized: false
+    }
+
+    state.retry.onclick = () => void initNewsState(state, true)
+    state.previous.onclick = () => navigateNews(state, false)
+    state.next.onclick = () => navigateNews(state, true)
+    state.article.onscroll = event => {
+        state.content.toggleAttribute('scrolled', event.target.scrollTop > 24)
+    }
+    return state
+}
+
+newsStates.global = createNewsState('global', 'globalNewsContainer', 'globalNewsCards')
+newsStates.server = createNewsState('server', 'newsContainer', 'newsCards')
 
 function getLandingSection(){
     return activeLandingSection
 }
 
 function setLandingSection(section){
-    if(!['play', 'mods', 'java', 'updates'].includes(section)){
+    if(!['home', 'globalUpdates', 'play', 'mods', 'java', 'serverUpdates'].includes(section)){
         return false
     }
     if(activeLandingSection === 'mods' && section !== 'mods' && !commitLandingModsView()){
@@ -1589,16 +1628,18 @@ function setLandingSection(section){
     }
 
     const sections = {
+        home: document.getElementById('landingHomeView'),
+        globalUpdates: document.getElementById('globalNewsContainer'),
         play: document.getElementById('landingPlayView'),
         mods: document.getElementById('landingModsView'),
         java: document.getElementById('landingJavaView'),
-        updates: document.getElementById('newsContainer')
+        serverUpdates: document.getElementById('newsContainer')
     }
     const tabs = {
         play: document.getElementById('landingPlayButton'),
         mods: document.getElementById('landingModsButton'),
         java: document.getElementById('landingJavaButton'),
-        updates: document.getElementById('landingUpdatesButton')
+        serverUpdates: document.getElementById('landingUpdatesButton')
     }
     const workspaceScroll = document.getElementById('landingWorkspaceScroll')
 
@@ -1606,17 +1647,26 @@ function setLandingSection(section){
         const selected = name === section
         view.hidden = !selected
         view.setAttribute('aria-hidden', (!selected).toString())
-        tabs[name].toggleAttribute('selected', selected)
-        tabs[name].setAttribute('aria-selected', selected.toString())
-        tabs[name].tabIndex = selected ? 0 : -1
+        if(tabs[name] != null){
+            tabs[name].toggleAttribute('selected', selected)
+            tabs[name].setAttribute('aria-selected', selected.toString())
+            tabs[name].tabIndex = selected ? 0 : -1
+        }
     }
 
     activeLandingSection = section
+    const inServerWorkspace = serverLandingSections.has(section)
+    document.getElementById('launcherWorkspace').toggleAttribute('global-view', !inServerWorkspace)
+    document.getElementById('launcherGameHeader').hidden = !inServerWorkspace
+    document.getElementById('launcherHomeHeader').hidden = inServerWorkspace
+    document.getElementById('launcherHomeTitle').textContent = section === 'globalUpdates'
+        ? document.getElementById('newsButtonText').textContent
+        : document.getElementById('landingHomeButton').textContent.trim()
     syncHeroMediaPlayback()
-    const showUpdates = section === 'updates'
-    document.getElementById('landingHomeButton').toggleAttribute('selected', section === 'play')
-    document.getElementById('newsButton').toggleAttribute('selected', showUpdates)
-    newsActive = showUpdates
+    document.getElementById('landingHomeButton').toggleAttribute('selected', section === 'home')
+    document.getElementById('newsButton').toggleAttribute('selected', section === 'globalUpdates')
+    updateServerSidebarSelection(inServerWorkspace ? ConfigManager.getSelectedServer() : null)
+    newsActive = section === 'globalUpdates' ? newsStates.global : (section === 'serverUpdates' ? newsStates.server : null)
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     workspaceScroll.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
 
@@ -1626,11 +1676,12 @@ function setLandingSection(section){
     if(section === 'java'){
         void prepareLandingJavaView()
     }
-    if(showUpdates && newsAlertShown){
-        $('#newsButtonAlert').fadeOut(200)
-        newsAlertShown = false
-        ConfigManager.setNewsCacheDismissed(activeNewsContext.serverId, activeNewsContext.source, true)
-        ConfigManager.save()
+    if(section === 'home'){
+        void initGlobalNews()
+    } else if(section === 'globalUpdates'){
+        void initGlobalNews().then(() => markNewsStateRead(newsStates.global))
+    } else if(section === 'serverUpdates'){
+        void initServerNews().then(() => markNewsStateRead(newsStates.server))
     }
     return true
 }
@@ -1648,11 +1699,12 @@ function openLandingSection(section){
 document.getElementById('landingPlayButton').onclick = () => openLandingSection('play')
 document.getElementById('landingModsButton').onclick = () => openLandingSection('mods')
 document.getElementById('landingJavaButton').onclick = () => openLandingSection('java')
-document.getElementById('landingHomeButton').onclick = () => openLandingSection('play')
-document.getElementById('landingUpdatesButton').onclick = () => openLandingSection('updates')
-document.getElementById('newsButton').onclick = () => openLandingSection('updates')
-document.getElementById('newsPreviewAction').onclick = () => setLandingSection('updates')
+document.getElementById('landingHomeButton').onclick = () => openLandingSection('home')
+document.getElementById('landingUpdatesButton').onclick = () => openLandingSection('serverUpdates')
+document.getElementById('newsButton').onclick = () => openLandingSection('globalUpdates')
+document.getElementById('newsPreviewAction').onclick = () => setLandingSection('serverUpdates')
 document.getElementById('newsBackButton').onclick = () => setLandingSection('play')
+document.getElementById('globalNewsBackButton').onclick = () => setLandingSection('home')
 
 document.getElementById('launcherGameTabs').addEventListener('keydown', event => {
     if(!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)){
@@ -1700,37 +1752,55 @@ window.addEventListener('message', event => {
     }
 })
 
-// Array to store article meta.
-let newsArr = null
-
-function setNewsPreviewState(message){
-    const newsCards = document.getElementById('newsCards')
-    const state = document.createElement('div')
-    state.className = 'newsPreviewState'
-    state.textContent = message
-    newsCards.replaceChildren(state)
+function setNewsPreviewState(state, message){
+    if(state.cards == null){
+        return
+    }
+    const status = document.createElement('div')
+    status.className = 'newsPreviewState'
+    status.textContent = message
+    state.cards.replaceChildren(status)
 }
 
-function renderNewsCards(articles){
+function normalizeArticleURL(value){
+    try {
+        const url = new NodeURL(value)
+        return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null
+    } catch {
+        return null
+    }
+}
+
+function openArticleExternally(value){
+    const url = normalizeArticleURL(value)
+    if(url != null){
+        void shell.openExternal(url)
+    }
+}
+
+function renderNewsCards(state, articles){
+    if(state.cards == null){
+        return
+    }
     if(articles == null){
-        setNewsPreviewState(Lang.queryJS('landing.news.previewFailed'))
+        setNewsPreviewState(state, Lang.queryJS('landing.news.previewFailed'))
         return
     }
     if(articles.length === 0){
-        setNewsPreviewState(Lang.queryJS('landing.news.previewEmpty'))
+        setNewsPreviewState(state, Lang.queryJS('landing.news.previewEmpty'))
         return
     }
 
-    const newsCards = document.getElementById('newsCards')
     const fragment = document.createDocumentFragment()
-    articles.slice(0, 3).forEach((article, index) => {
+    const visibleArticles = state.scope === 'global' ? articles : articles.slice(0, 3)
+    visibleArticles.forEach((article, index) => {
         const card = document.createElement('button')
         card.type = 'button'
         card.className = 'newsPreviewCard'
 
         const artwork = document.createElement('span')
         artwork.className = 'newsPreviewArtwork'
-        artwork.style.backgroundImage = `url('${article.image || `assets/images/backgrounds/${index}.jpg`}')`
+        artwork.style.backgroundImage = `url(${JSON.stringify(article.image || `assets/images/backgrounds/${index % 12}.jpg`)})`
 
         const copy = document.createElement('span')
         copy.className = 'newsPreviewCardCopy'
@@ -1742,93 +1812,73 @@ function renderNewsCards(articles){
         title.textContent = article.title
         copy.append(date, title)
         card.append(artwork, copy)
-        card.onclick = () => {
-            displayArticle(article, index + 1)
-            setLandingSection('updates')
+        if(state.scope === 'global'){
+            const articleURL = normalizeArticleURL(article.link)
+            card.disabled = articleURL == null
+            card.onclick = () => openArticleExternally(articleURL)
+        } else {
+            card.onclick = () => {
+                displayNewsArticle(state, article, index + 1)
+                setLandingSection('serverUpdates')
+            }
         }
         fragment.appendChild(card)
     })
-    newsCards.replaceChildren(fragment)
+    state.cards.replaceChildren(fragment)
 }
 
-// News load animation listener.
-let newsLoadingListener = null
-
-/**
- * Set the news loading animation.
- * 
- * @param {boolean} val True to set loading animation, otherwise false.
- */
-function setNewsLoading(val){
+function setNewsLoading(state, val){
     if(val){
-        if(newsLoadingListener != null){
-            clearInterval(newsLoadingListener)
+        if(state.loadingTimer != null){
+            clearInterval(state.loadingTimer)
         }
         const nLStr = Lang.queryJS('landing.news.checking')
         let dotStr = '..'
-        nELoadSpan.innerHTML = nLStr + dotStr
-        newsLoadingListener = setInterval(() => {
+        state.loadingLabel.textContent = nLStr + dotStr
+        state.loadingTimer = setInterval(() => {
             if(dotStr.length >= 3){
                 dotStr = ''
             } else {
                 dotStr += '.'
             }
-            nELoadSpan.innerHTML = nLStr + dotStr
+            state.loadingLabel.textContent = nLStr + dotStr
         }, 750)
-    } else {
-        if(newsLoadingListener != null){
-            clearInterval(newsLoadingListener)
-            newsLoadingListener = null
-        }
+    } else if(state.loadingTimer != null){
+        clearInterval(state.loadingTimer)
+        state.loadingTimer = null
     }
 }
 
-// Bind retry button.
-newsErrorRetry.onclick = () => {
-    $('#newsErrorFailed').fadeOut(250, () => {
-        initNews()
-        $('#newsErrorLoading').fadeIn(250)
-    })
+function showNewsResult(state, result){
+    state.content.style.display = result === 'content' ? 'flex' : 'none'
+    state.errors.style.display = result === 'content' ? 'none' : 'flex'
+    state.loading.style.display = result === 'loading' ? 'flex' : 'none'
+    state.failed.style.display = result === 'failed' ? 'flex' : 'none'
+    state.empty.style.display = result === 'empty' ? 'block' : 'none'
+    setNewsLoading(state, result === 'loading')
 }
 
-newsArticleContentScrollable.onscroll = (e) => {
-    if(e.target.scrollTop > Number.parseFloat($('.newsArticleSpacerTop').css('height'))){
-        newsContent.setAttribute('scrolled', '')
-    } else {
-        newsContent.removeAttribute('scrolled')
+let globalNewsAlertShown = false
+
+function setGlobalNewsAlert(visible){
+    globalNewsAlertShown = visible
+    const alert = document.getElementById('newsButtonAlert')
+    $(alert).stop(true, true)[visible ? 'fadeIn' : 'fadeOut'](200)
+}
+
+function markNewsStateRead(state){
+    if(!state.initialized){
+        return
+    }
+    ConfigManager.setNewsCacheDismissed(state.context.serverId, state.context.source, true)
+    ConfigManager.save()
+    if(state.scope === 'global' && globalNewsAlertShown){
+        setGlobalNewsAlert(false)
     }
 }
 
-/**
- * Reload the news without restarting.
- * 
- * @returns {Promise.<void>} A promise which resolves when the news
- * content has finished loading and transitioning.
- */
 function reloadNews(){
-    return new Promise(resolve => {
-        $('#newsContent').fadeOut(250, () => {
-            $('#newsErrorLoading').fadeIn(250)
-            initNews().then(() => {
-                resolve()
-            })
-        })
-    })
-}
-
-let newsAlertShown = false
-let newsRequestSequence = 0
-let activeNewsContext = {
-    serverId: '__global__',
-    source: ''
-}
-
-/**
- * Show the news alert indicating there is new news.
- */
-function showNewsAlert(){
-    newsAlertShown = true
-    $(newsButtonAlert).fadeIn(250)
+    return Promise.all([initGlobalNews(true), initServerNews(true)])
 }
 
 async function digestMessage(str) {
@@ -1841,8 +1891,14 @@ async function digestMessage(str) {
     return hashHex
 }
 
-async function resolveNewsContext(){
+async function resolveNewsContext(scope){
     const distroData = await DistroAPI.getDistribution()
+    if(scope === 'global'){
+        return {
+            serverId: '__global__',
+            source: distroData.rawDistribution.rss || ''
+        }
+    }
     const selectedServerId = ConfigManager.getSelectedServer()
     const server = selectedServerId == null ? null : distroData.getServerById(selectedServerId)
     const source = server?.rawServer?.ui?.news?.rss || distroData.rawDistribution.rss || ''
@@ -1852,139 +1908,156 @@ async function resolveNewsContext(){
     }
 }
 
-/**
- * Initialize News UI. This will load the news and prepare
- * the UI accordingly.
- * 
- * @returns {Promise.<void>} A promise which resolves when the news
- * content has finished loading and transitioning.
- */
-async function initNews(){
-    const requestSequence = ++newsRequestSequence
-    const context = await resolveNewsContext()
-    if(requestSequence !== newsRequestSequence){
+async function initNewsState(state, force = false){
+    let context
+    try {
+        context = await resolveNewsContext(state.scope)
+    } catch(err) {
+        loggerLanding.error(`Unable to resolve ${state.scope} news context.`, err)
+        ++state.requestSequence
+        state.articles = null
+        state.contextKey = ''
+        state.loadingPromise = null
+        state.initialized = true
+        renderNewsCards(state, null)
+        showNewsResult(state, 'failed')
+        if(state.scope === 'global'){
+            setGlobalNewsAlert(false)
+        }
         return
     }
-    activeNewsContext = context
-    newsAlertShown = false
-    $('#newsButtonAlert').stop(true, true).hide()
-    $('#newsContent').stop(true, true).hide()
-    $('#newsErrorFailed, #newsErrorNone').stop(true, true).hide()
-    $('#newsErrorContainer, #newsErrorLoading').stop(true, true).show()
-    setNewsLoading(true)
-
-    const cached = ConfigManager.getNewsCache(context.serverId, context.source)
-    let news = await loadNews(context.source)
-    if(requestSequence !== newsRequestSequence){
-        return
-    }
-    let usingCache = false
-    if(news?.articles == null && Array.isArray(cached.articles)){
-        news = { articles: cached.articles }
-        usingCache = true
+    const contextKey = `${context.serverId}\u0000${context.source}`
+    if(!force && state.contextKey === contextKey){
+        if(state.loadingPromise != null){
+            return state.loadingPromise
+        }
+        if(state.initialized){
+            return
+        }
     }
 
-    newsArr = news?.articles || null
+    const requestSequence = ++state.requestSequence
+    state.context = context
+    state.contextKey = contextKey
+    state.initialized = false
+    showNewsResult(state, 'loading')
+    setNewsPreviewState(state, Lang.queryJS('landing.news.checking'))
+    if(state.scope === 'global'){
+        setGlobalNewsAlert(false)
+    }
 
-    if(newsArr == null){
-        // News Loading Failed
-        setNewsLoading(false)
-        renderNewsCards(null)
-
-        await $('#newsErrorLoading').fadeOut(250).promise()
-        if(requestSequence !== newsRequestSequence){
-            return
-        }
-        await $('#newsErrorFailed').fadeIn(250).promise()
-
-    } else if(newsArr.length === 0) {
-        // No News Articles
-        setNewsLoading(false)
-        renderNewsCards([])
-
-        ConfigManager.setNewsCache(context.serverId, context.source, {
-            date: null,
-            content: null,
-            dismissed: false,
-            articles: []
-        })
-        ConfigManager.save()
-
-        await $('#newsErrorLoading').fadeOut(250).promise()
-        if(requestSequence !== newsRequestSequence){
-            return
-        }
-        await $('#newsErrorNone').fadeIn(250).promise()
-    } else {
-        // Success
-        setNewsLoading(false)
-        renderNewsCards(newsArr)
-
-        const lN = newsArr[0]
-        const newHash = await digestMessage(lN.content)
-        if(requestSequence !== newsRequestSequence){
-            return
-        }
-        const newDate = new Date(lN.date)
-        let isNew = false
-
-        if(usingCache){
-            if(!cached.dismissed){
-                showNewsAlert()
+    const operation = (async () => {
+        try {
+            const cached = ConfigManager.getNewsCache(context.serverId, context.source)
+            let news = await loadNews(context.source)
+            if(requestSequence !== state.requestSequence){
+                return
             }
-        } else if(cached.date != null && cached.content != null){
 
-            if(new Date(cached.date) >= newDate){
+            let usingCache = false
+            if(news?.articles == null && Array.isArray(cached.articles)){
+                news = { articles: cached.articles }
+                usingCache = true
+            }
 
-                // Compare Content
-                if(cached.content !== newHash){
-                    isNew = true
-                    showNewsAlert()
-                } else {
-                    if(!cached.dismissed){
-                        isNew = true
-                        showNewsAlert()
-                    }
+            state.articles = news?.articles || null
+            if(state.articles == null){
+                renderNewsCards(state, null)
+                showNewsResult(state, 'failed')
+                state.initialized = true
+                return
+            }
+
+            if(state.articles.length === 0){
+                renderNewsCards(state, [])
+                showNewsResult(state, 'empty')
+                if(!usingCache){
+                    ConfigManager.setNewsCache(context.serverId, context.source, {
+                        date: null,
+                        content: null,
+                        dismissed: true,
+                        articles: []
+                    })
+                    ConfigManager.save()
                 }
-
-            } else {
-                isNew = true
-                showNewsAlert()
+                if(state.scope === 'global'){
+                    setGlobalNewsAlert(false)
+                }
+                state.initialized = true
+                return
             }
 
-        } else if(!usingCache) {
-            isNew = true
-            showNewsAlert()
-        }
+            renderNewsCards(state, state.articles)
+            const latest = state.articles[0]
+            const newHash = await digestMessage(latest.content || '')
+            if(requestSequence !== state.requestSequence){
+                return
+            }
+            const parsedDate = new Date(latest.date).getTime()
+            const newDate = Number.isFinite(parsedDate) ? parsedDate : 0
+            const cachedDate = Number(cached.date) || 0
+            const changed = cached.content == null || cached.content !== newHash || newDate > cachedDate
+            const dismissed = usingCache ? Boolean(cached.dismissed) : (changed ? false : Boolean(cached.dismissed))
 
-        if(!usingCache){
-            ConfigManager.setNewsCache(context.serverId, context.source, {
-                date: newDate.getTime(),
-                content: newHash,
-                dismissed: isNew ? false : cached.dismissed,
-                articles: newsArr
-            })
-            ConfigManager.save()
-        }
+            if(!usingCache){
+                ConfigManager.setNewsCache(context.serverId, context.source, {
+                    date: newDate,
+                    content: newHash,
+                    dismissed,
+                    articles: state.articles
+                })
+                ConfigManager.save()
+            }
+            if(state.scope === 'global'){
+                setGlobalNewsAlert(!dismissed)
+            }
 
-        const switchHandler = (forward) => {
-            let cArt = parseInt(newsContent.getAttribute('article'))
-            let nxtArt = forward ? (cArt >= newsArr.length-1 ? 0 : cArt + 1) : (cArt <= 0 ? newsArr.length-1 : cArt - 1)
-    
-            displayArticle(newsArr[nxtArt], nxtArt+1)
+            displayNewsArticle(state, state.articles[0], 1)
+            showNewsResult(state, 'content')
+            state.initialized = true
+        } catch(err) {
+            if(requestSequence !== state.requestSequence){
+                return
+            }
+            loggerLanding.error(`Unable to initialize ${state.scope} news.`, err)
+            state.articles = null
+            state.initialized = true
+            renderNewsCards(state, null)
+            showNewsResult(state, 'failed')
+            if(state.scope === 'global'){
+                setGlobalNewsAlert(false)
+            }
         }
+    })()
 
-        document.getElementById('newsNavigateRight').onclick = () => { switchHandler(true) }
-        document.getElementById('newsNavigateLeft').onclick = () => { switchHandler(false) }
-        await $('#newsErrorContainer').fadeOut(250).promise()
-        if(requestSequence !== newsRequestSequence){
-            return
+    state.loadingPromise = operation
+    try {
+        await operation
+    } finally {
+        if(state.loadingPromise === operation){
+            state.loadingPromise = null
         }
-        displayArticle(newsArr[0], 1)
-        await $('#newsContent').fadeIn(250).promise()
     }
+}
 
+function initGlobalNews(force = false){
+    return initNewsState(newsStates.global, force)
+}
 
+function initServerNews(force = false){
+    return initNewsState(newsStates.server, force)
+}
+
+function navigateNews(state, forward){
+    if(!Array.isArray(state.articles) || state.articles.length === 0){
+        return
+    }
+    const current = Number.parseInt(state.content.getAttribute('article'), 10)
+    const currentIndex = Number.isFinite(current) ? current : 0
+    const nextIndex = forward
+        ? (currentIndex + 1) % state.articles.length
+        : (currentIndex - 1 + state.articles.length) % state.articles.length
+    displayNewsArticle(state, state.articles[nextIndex], nextIndex + 1)
 }
 
 /**
@@ -1993,21 +2066,9 @@ async function initNews(){
  * open the news UI.
  */
 document.addEventListener('keydown', (e) => {
-    if(newsActive){
-        if(e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
-            document.getElementById(e.key === 'ArrowRight' ? 'newsNavigateRight' : 'newsNavigateLeft').click()
-        }
-        // Interferes with scrolling an article using the down arrow.
-        // Not sure of a straight forward solution at this point.
-        // if(e.key === 'ArrowDown'){
-        //     document.getElementById('newsButton').click()
-        // }
-    } else {
-        if(getCurrentView() === VIEWS.landing){
-            if(e.key === 'ArrowUp'){
-                document.getElementById('newsButton').click()
-            }
-        }
+    if(getCurrentView() === VIEWS.landing && newsActive != null && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')){
+        e.preventDefault()
+        navigateNews(newsActive, e.key === 'ArrowRight')
     }
 })
 
@@ -2017,22 +2078,33 @@ document.addEventListener('keydown', (e) => {
  * @param {Object} articleObject The article meta object.
  * @param {number} index The article index.
  */
-function displayArticle(articleObject, index){
-    newsArticleTitle.innerHTML = articleObject.title
-    newsArticleTitle.href = articleObject.link
-    newsArticleAuthor.innerHTML = 'by ' + articleObject.author
-    newsArticleDate.innerHTML = articleObject.date
-    newsArticleComments.innerHTML = articleObject.comments
-    newsArticleComments.href = articleObject.commentsLink
-    newsArticleContentScrollable.innerHTML = '<div id="newsArticleContentWrapper"><div class="newsArticleSpacerTop"></div>' + articleObject.content + '<div class="newsArticleSpacerBot"></div></div>'
-    Array.from(newsArticleContentScrollable.getElementsByClassName('bbCodeSpoilerButton')).forEach(v => {
+function displayNewsArticle(state, articleObject, index){
+    state.title.textContent = articleObject.title || ''
+    const articleURL = normalizeArticleURL(articleObject.link)
+    if(articleURL == null){
+        state.title.removeAttribute('href')
+    } else {
+        state.title.href = articleURL
+    }
+    state.author.textContent = articleObject.author ? `by ${articleObject.author}` : ''
+    state.date.textContent = articleObject.date || ''
+    state.comments.textContent = articleObject.comments || ''
+    const commentsURL = normalizeArticleURL(articleObject.commentsLink)
+    if(commentsURL == null){
+        state.comments.removeAttribute('href')
+    } else {
+        state.comments.href = commentsURL
+    }
+    state.article.innerHTML = `<div class="newsFullArticleContentWrapper"><div class="newsArticleSpacerTop"></div>${articleObject.content || ''}<div class="newsArticleSpacerBot"></div></div>`
+    Array.from(state.article.getElementsByClassName('bbCodeSpoilerButton')).forEach(v => {
         v.onclick = () => {
             const text = v.parentElement.getElementsByClassName('bbCodeSpoilerText')[0]
             text.style.display = text.style.display === 'block' ? 'none' : 'block'
         }
     })
-    newsNavigationStatus.innerHTML = Lang.query('ejs.landing.newsNavigationStatus', {currentPage: index, totalPages: newsArr.length})
-    newsContent.setAttribute('article', index-1)
+    state.navigation.textContent = Lang.query('ejs.landing.newsNavigationStatus', {currentPage: index, totalPages: state.articles.length})
+    state.content.setAttribute('article', index - 1)
+    state.article.scrollTop = 0
 }
 
 /**
@@ -2043,7 +2115,7 @@ async function loadNews(newsFeed){
 
     if(!newsFeed) {
         loggerLanding.debug('No RSS feed provided.')
-        return null
+        return { articles: [] }
     }
 
     const promise = new Promise(resolve => {

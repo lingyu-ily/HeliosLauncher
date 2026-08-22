@@ -1,5 +1,9 @@
 <div id="landingContainer" style="display: none;">
     <section id="launcherWorkspace">
+        <header id="launcherHomeHeader" hidden>
+            <span id="launcherHomeEyebrow">MAPLECRAFT</span>
+            <h1 id="launcherHomeTitle"><%- lang('landing.homeTitle') %></h1>
+        </header>
         <header id="launcherGameHeader">
             <span id="launcherGameEyebrow">MAPLECRAFT</span>
             <nav id="launcherGameTabs" role="tablist" aria-label="<%- lang('landing.tabsAriaLabel') %>">
@@ -11,6 +15,63 @@
         </header>
 
         <div id="landingWorkspaceScroll">
+            <section id="landingHomeView" class="landingSectionView" aria-labelledby="landingHomeButton" aria-hidden="true" hidden>
+                <header id="landingHomeContentHeader">
+                    <span><%- lang('landing.navWhatsNew') %></span>
+                    <h2><%- lang('landing.globalNewsTitle') %></h2>
+                    <p><%- lang('landing.homeDescription') %></p>
+                </header>
+                <div id="globalNewsCards" class="newsCardGrid" aria-live="polite">
+                    <div class="newsPreviewState"><%- lang('landing.newsErrorLoadSpan') %></div>
+                </div>
+            </section>
+
+            <section id="globalNewsContainer" class="landingSectionView newsFullView" aria-labelledby="newsButton" aria-hidden="true" hidden>
+                <div class="newsFullHeader">
+                    <div>
+                        <span>MAPLECRAFT</span>
+                        <h1><%- lang('landing.globalNewsTitle') %></h1>
+                    </div>
+                    <button id="globalNewsBackButton" class="mcButtonSecondary" type="button"><%- lang('landing.backToHome') %></button>
+                </div>
+                <div id="globalNewsContent" class="newsFullContent" data-news-content article="-1" style="display: none;">
+                    <div class="newsFullStatusContainer" data-news-status>
+                        <div class="newsFullStatusContent">
+                            <div class="newsFullTitleContainer">
+                                <a id="globalNewsArticleTitle" class="newsFullArticleTitle" data-news-title>Lorem Ipsum</a>
+                            </div>
+                            <div class="newsFullMetaContainer">
+                                <span id="globalNewsArticleDate" data-news-date></span>
+                                <span id="globalNewsArticleAuthor" data-news-author></span>
+                                <a id="globalNewsArticleComments" class="newsFullArticleComments" data-news-comments></a>
+                            </div>
+                        </div>
+                        <div class="newsFullNavigationContainer">
+                            <button id="globalNewsNavigateLeft" class="newsFullNavigateButton" data-news-previous type="button" aria-label="Previous">‹</button>
+                            <span id="globalNewsNavigationStatus" data-news-navigation><%- lang('landing.newsNavigationStatus', { currentPage: 1, totalPages: 1 }) %></span>
+                            <button id="globalNewsNavigateRight" class="newsFullNavigateButton" data-news-next type="button" aria-label="Next">›</button>
+                        </div>
+                    </div>
+                    <div class="newsFullArticleContainer">
+                        <div class="newsFullArticleContent">
+                            <div id="globalNewsArticleContentScrollable" class="newsFullArticleScrollable" data-news-article></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="globalNewsErrorContainer" class="newsFullErrorContainer" data-news-errors>
+                    <div class="newsFullErrorLoading" data-news-loading>
+                        <span class="newsErrorContent" data-news-loading-label><%- lang('landing.newsErrorLoadSpan') %></span>
+                    </div>
+                    <div class="newsFullErrorFailed" data-news-failed style="display: none;">
+                        <span class="newsErrorContent"><%- lang('landing.newsErrorFailedSpan') %></span>
+                        <button id="globalNewsErrorRetry" class="mcButtonSecondary" data-news-retry type="button"><%- lang('landing.newsErrorRetryButton') %></button>
+                    </div>
+                    <div data-news-empty style="display: none;">
+                        <span class="newsErrorContent"><%- lang('landing.newsErrorNoneSpan') %></span>
+                    </div>
+                </div>
+            </section>
+
             <main id="landingPlayView" class="landingSectionView" role="tabpanel" aria-labelledby="landingPlayButton">
                 <section id="launcherHero" data-default-background="assets/images/backgrounds/<%=bkid%>.jpg" style="background-image: url('assets/images/backgrounds/<%=bkid%>.jpg');">
                     <video id="launcherHeroVideo" loop playsinline preload="metadata" aria-hidden="true"></video>
@@ -77,7 +138,7 @@
                         </div>
                         <button id="newsPreviewAction" class="mcButtonSecondary" type="button"><%- lang('landing.newsPreviewAction') %></button>
                     </div>
-                    <div id="newsCards" aria-live="polite">
+                    <div id="newsCards" class="newsCardGrid" aria-live="polite">
                         <div class="newsPreviewState"><%- lang('landing.newsErrorLoadSpan') %></div>
                     </div>
                 </section>
@@ -134,47 +195,47 @@
 
             <%- include('java') %>
 
-            <section id="newsContainer" class="landingSectionView" role="tabpanel" aria-labelledby="landingUpdatesButton" aria-hidden="true" hidden>
-                <div id="newsViewHeader">
+            <section id="newsContainer" class="landingSectionView newsFullView" role="tabpanel" aria-labelledby="landingUpdatesButton" aria-hidden="true" hidden>
+                <div id="newsViewHeader" class="newsFullHeader">
                     <div>
                         <span id="newsViewEyebrow">MAPLECRAFT</span>
                         <h1 id="newsViewTitle"><%- lang('landing.navUpdates') %></h1>
                     </div>
                     <button id="newsBackButton" class="mcButtonSecondary" type="button"><%- lang('landing.backToPlay') %></button>
                 </div>
-                <div id="newsContent" article="-1" style="display: none;">
-                    <div id="newsStatusContainer">
-                        <div id="newsStatusContent">
-                            <div id="newsTitleContainer">
-                                <a id="newsArticleTitle" href="#">Lorem Ipsum</a>
+                <div id="newsContent" class="newsFullContent" data-news-content article="-1" style="display: none;">
+                    <div id="newsStatusContainer" class="newsFullStatusContainer" data-news-status>
+                        <div id="newsStatusContent" class="newsFullStatusContent">
+                            <div id="newsTitleContainer" class="newsFullTitleContainer">
+                                <a id="newsArticleTitle" class="newsFullArticleTitle" data-news-title>Lorem Ipsum</a>
                             </div>
-                            <div id="newsMetaContainer">
-                                <span id="newsArticleDate"></span>
-                                <span id="newsArticleAuthor"></span>
-                                <a href="#" id="newsArticleComments"></a>
+                            <div id="newsMetaContainer" class="newsFullMetaContainer">
+                                <span id="newsArticleDate" data-news-date></span>
+                                <span id="newsArticleAuthor" data-news-author></span>
+                                <a id="newsArticleComments" class="newsFullArticleComments" data-news-comments></a>
                             </div>
                         </div>
-                        <div id="newsNavigationContainer">
-                            <button id="newsNavigateLeft" type="button" aria-label="Previous">‹</button>
-                            <span id="newsNavigationStatus"><%- lang('landing.newsNavigationStatus', { currentPage: 1, totalPages: 1 }) %></span>
-                            <button id="newsNavigateRight" type="button" aria-label="Next">›</button>
+                        <div id="newsNavigationContainer" class="newsFullNavigationContainer">
+                            <button id="newsNavigateLeft" class="newsFullNavigateButton" data-news-previous type="button" aria-label="Previous">‹</button>
+                            <span id="newsNavigationStatus" data-news-navigation><%- lang('landing.newsNavigationStatus', { currentPage: 1, totalPages: 1 }) %></span>
+                            <button id="newsNavigateRight" class="newsFullNavigateButton" data-news-next type="button" aria-label="Next">›</button>
                         </div>
                     </div>
-                    <div id="newsArticleContainer">
-                        <div id="newsArticleContent">
-                            <div id="newsArticleContentScrollable"></div>
+                    <div id="newsArticleContainer" class="newsFullArticleContainer">
+                        <div id="newsArticleContent" class="newsFullArticleContent">
+                            <div id="newsArticleContentScrollable" class="newsFullArticleScrollable" data-news-article></div>
                         </div>
                     </div>
                 </div>
-                <div id="newsErrorContainer">
-                    <div id="newsErrorLoading">
-                        <span id="nELoadSpan" class="newsErrorContent"><%- lang('landing.newsErrorLoadSpan') %></span>
+                <div id="newsErrorContainer" class="newsFullErrorContainer" data-news-errors>
+                    <div id="newsErrorLoading" class="newsFullErrorLoading" data-news-loading>
+                        <span id="nELoadSpan" class="newsErrorContent" data-news-loading-label><%- lang('landing.newsErrorLoadSpan') %></span>
                     </div>
-                    <div id="newsErrorFailed" style="display: none;">
+                    <div id="newsErrorFailed" class="newsFullErrorFailed" data-news-failed style="display: none;">
                         <span id="nEFailedSpan" class="newsErrorContent"><%- lang('landing.newsErrorFailedSpan') %></span>
-                        <button id="newsErrorRetry" class="mcButtonSecondary"><%- lang('landing.newsErrorRetryButton') %></button>
+                        <button id="newsErrorRetry" class="mcButtonSecondary" data-news-retry type="button"><%- lang('landing.newsErrorRetryButton') %></button>
                     </div>
-                    <div id="newsErrorNone" style="display: none;">
+                    <div id="newsErrorNone" data-news-empty style="display: none;">
                         <span id="nENoneSpan" class="newsErrorContent"><%- lang('landing.newsErrorNoneSpan') %></span>
                     </div>
                 </div>

@@ -68,6 +68,7 @@ const launcherHeroMediaControls = document.getElementById('launcherHeroMediaCont
 const launcherHeroPlayToggle  = document.getElementById('launcherHeroPlayToggle')
 const launcherHeroMuteToggle  = document.getElementById('launcherHeroMuteToggle')
 const launcherHeroMediaStatus = document.getElementById('launcherHeroMediaStatus')
+const launcherHeroContent     = document.getElementById('image_seal_container')
 const launcherHeroLogo        = document.getElementById('image_seal')
 const launcherHeroWordmark    = document.getElementById('launcherHeroWordmark')
 const launcherHeroTagline     = document.getElementById('launcherHeroTagline')
@@ -77,11 +78,10 @@ const defaultServerPresentation = {
     background: launcherHero.dataset.defaultBackground,
     logo: launcherHeroLogo.getAttribute('src'),
     eyebrow: launcherGameEyebrow.textContent,
-    title: launcherHeroWordmark.textContent,
-    tagline: launcherHeroTagline.textContent,
     newsTitle: newsPreviewTitle.textContent
 }
 let heroPresentationSequence = 0
+let heroPresentationServerId = null
 let activeHeroMedia = null
 let activeHeroMediaReady = false
 let activeHeroMediaDownload = null
@@ -94,6 +94,19 @@ let launchInProgress = false
 let launchServerAvailable = false
 let accountCopyFeedbackSequence = 0
 let accountCopyFeedbackTimer = null
+
+function normalizeHeroCopy(value){
+    return typeof value === 'string' ? value.trim() : ''
+}
+
+function playHeroPresentationEnter(){
+    launcherHeroContent.removeAttribute('hero-entering')
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+        return
+    }
+    void launcherHeroContent.offsetWidth
+    launcherHeroContent.setAttribute('hero-entering', '')
+}
 
 function clearLaunchAccountCopyFeedback(){
     accountCopyFeedbackSequence++
@@ -560,10 +573,11 @@ function renderServerSidebar(distro){
             if(getCurrentView() === VIEWS.settings){
                 let serverChanged = false
                 switchLauncherShellView(VIEWS.landing, () => {
-                    if(!setLandingSection('play')){
+                    const selectingDifferentServer = ConfigManager.getSelectedServer() !== server.id
+                    if(!setLandingSection('play', false)){
                         return false
                     }
-                    if(ConfigManager.getSelectedServer() !== server.id){
+                    if(selectingDifferentServer){
                         if(updateSelectedServer(serv) === false){
                             return false
                         }
@@ -573,6 +587,8 @@ function renderServerSidebar(distro){
                 }, async () => {
                     if(serverChanged){
                         await refreshServerStatus(true)
+                    } else {
+                        playHeroPresentationEnter()
                     }
                 }, requestSequence)
                 return
@@ -584,7 +600,7 @@ function renderServerSidebar(distro){
                 item.focus()
                 return
             }
-            if(!setLandingSection('play')){
+            if(!setLandingSection('play', false)){
                 return
             }
             if(updateSelectedServer(serv) === false){
@@ -1002,6 +1018,8 @@ launcherHeroMuteToggle.onclick = () => {
 async function applyServerPresentation(serv){
     const requestSequence = ++heroPresentationSequence
     const rawServer = serv?.rawServer
+    const serverId = rawServer?.id || null
+    const serverChanged = heroPresentationServerId !== serverId
     const hero = rawServer?.ui?.hero || {}
     const video = normalizeHeroVideoDescriptor(hero.video)
     const eyebrow = typeof hero.eyebrow === 'string' && hero.eyebrow.trim()
@@ -1011,16 +1029,13 @@ async function applyServerPresentation(serv){
         background: hero.background || defaultServerPresentation.background,
         logo: hero.logo || defaultServerPresentation.logo,
         eyebrow,
-        title: hero.title || defaultServerPresentation.title,
-        tagline: hero.tagline || defaultServerPresentation.tagline
+        title: normalizeHeroCopy(hero.title),
+        tagline: normalizeHeroCopy(hero.tagline)
     }
 
     launcherGameEyebrow.textContent = presentation.eyebrow
     launcherGameEyebrow.title = presentation.eyebrow
-    launcherHeroWordmark.textContent = presentation.title
-    launcherHeroTagline.textContent = presentation.tagline
-    newsPreviewTitle.textContent = presentation.title || defaultServerPresentation.newsTitle
-    configureHeroMedia(rawServer?.id, video, requestSequence)
+    configureHeroMedia(serverId, video, requestSequence)
 
     const [background, logo] = await Promise.all([
         preloadHeroAsset(presentation.background, defaultServerPresentation.background),
@@ -1037,6 +1052,15 @@ async function applyServerPresentation(serv){
         launcherHero.style.backgroundImage = `url(${JSON.stringify(background)})`
         launcherHeroLogo.src = logo
         launcherHeroLogo.alt = presentation.title || rawServer?.name || 'MapleCraft'
+        launcherHeroWordmark.textContent = presentation.title
+        launcherHeroWordmark.toggleAttribute('hidden', presentation.title.length === 0)
+        launcherHeroTagline.textContent = presentation.tagline
+        launcherHeroTagline.toggleAttribute('hidden', presentation.tagline.length === 0)
+        newsPreviewTitle.textContent = presentation.title || defaultServerPresentation.newsTitle
+        heroPresentationServerId = serverId
+        if(serverChanged){
+            playHeroPresentationEnter()
+        }
         setTimeout(() => {
             if(requestSequence === heroPresentationSequence){
                 launcherHero.removeAttribute('changing')
@@ -1621,7 +1645,7 @@ function getLandingSection(){
     return activeLandingSection
 }
 
-function setLandingSection(section){
+function setLandingSection(section, animateHero = true){
     if(!['home', 'globalUpdates', 'play', 'mods', 'java', 'serverUpdates'].includes(section)){
         return false
     }
@@ -1659,6 +1683,7 @@ function setLandingSection(section){
         }
     }
 
+    const previousSection = activeLandingSection
     activeLandingSection = section
     const inServerWorkspace = serverLandingSections.has(section)
     document.getElementById('launcherWorkspace').toggleAttribute('global-view', !inServerWorkspace)
@@ -1675,6 +1700,9 @@ function setLandingSection(section){
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     workspaceScroll.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
     playLauncherSectionEnter(sections[section])
+    if(section === 'play' && previousSection !== 'play' && animateHero){
+        playHeroPresentationEnter()
+    }
 
     if(section === 'mods'){
         void prepareLandingModsView()

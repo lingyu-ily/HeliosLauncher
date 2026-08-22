@@ -159,7 +159,7 @@ Whether or not the server can be autoconnected to. If false, the server will not
 
 ### `Server.ui: object`
 
-Optional per-server Launcher presentation. `ui.hero` may define `background`, `logo`, `eyebrow`, `title`, and `tagline`. `ui.news.rss` overrides the distribution-level RSS feed for this server. Missing fields inherit the Launcher's global presentation or the distribution-level RSS feed.
+Optional per-server Launcher presentation. `ui.hero` may define `background`, `logo`, `eyebrow`, `title`, and `tagline`. Missing or blank `title` and `tagline` values are hidden in the hero; missing `background`, `logo`, and `eyebrow` values inherit the Launcher's global presentation. `ui.news.rss` overrides the distribution-level RSS feed for this server, while a missing value inherits the distribution-level feed.
 
 ### `Server.javaOptions: JavaOptions`
 

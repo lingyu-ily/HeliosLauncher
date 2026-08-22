@@ -4729,9 +4729,11 @@ button:disabled {
     position: relative;
     height: clamp(285px, 58vh, 550px);
     min-height: 285px;
+    box-sizing: border-box;
     display: grid;
-    place-items: center;
+    place-items: start center;
     overflow: hidden;
+    padding-top: 16px;
     background-position: center;
     background-size: cover;
     transition: filter 200ms ease, opacity 200ms ease;
@@ -4787,14 +4789,44 @@ button:disabled {
 #image_seal_container {
     position: relative;
     z-index: 2;
-    width: auto;
+    width: calc(100% - 32px);
     height: auto;
     display: flex;
     align-items: center;
     flex-direction: column;
-    margin: -10px 0 0;
+    margin: 0;
     border-radius: 0;
     filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
+    transform-origin: top center;
+}
+
+#image_seal_container[hero-entering] {
+    animation: launcherHeroEnter 640ms cubic-bezier(0.22, 0.75, 0.3, 1) both;
+}
+
+@keyframes launcherHeroEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(-56px);
+    }
+    42% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    56% {
+        transform: translateY(-10px);
+    }
+    68% {
+        transform: translateY(0);
+    }
+    80% {
+        transform: translateY(-4px);
+    }
+    90%,
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 #launcherHeroMediaControls {
@@ -4864,13 +4896,16 @@ button:disabled {
 }
 
 #image_seal {
-    width: 105px;
-    height: 105px;
+    width: auto;
+    height: auto;
+    max-width: min(420px, 100%);
+    max-height: 105px;
     object-fit: contain;
     transition: opacity 200ms ease;
 }
 
 #launcherHeroWordmark {
+    max-width: 100%;
     margin-top: -9px;
     color: #fff;
     font-family: "Avenir Medium", "Segoe UI", sans-serif;
@@ -4878,16 +4913,24 @@ button:disabled {
     font-weight: 900;
     letter-spacing: 3px;
     line-height: 1;
+    text-align: center;
     text-shadow: 0 3px 0 #2c211e, 0 7px 14px rgba(0, 0, 0, 0.75);
 }
 
 #launcherHeroTagline {
+    max-width: 100%;
     margin-top: 8px;
     color: #fff;
     font-size: 11px;
     font-weight: 650;
     letter-spacing: 1.2px;
+    text-align: center;
     text-shadow: 0 2px 6px #000;
+}
+
+#launcherHeroWordmark[hidden],
+#launcherHeroTagline[hidden] {
+    display: none;
 }
 
 #launcherActionBar {

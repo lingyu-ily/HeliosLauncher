@@ -1153,7 +1153,7 @@ function updateSelectedServer(serv){
     }
     return true
 }
-// Real text is set in uibinder.js on distributionIndexDone.
+// Real text is set by the startup initialization in uibinder.js.
 selectedServerName.textContent = Lang.queryJS('landing.selectedServer.loading')
 function focusSelectedServerSidebar(){
     const selectedItem = serverSidebarList.querySelector('.serverSidebarItem[selected]')
@@ -1263,7 +1263,7 @@ const refreshServerStatus = async (fade = false) => {
 }
 
 refreshMojangStatuses()
-// Server Status is refreshed in uibinder.js on distributionIndexDone.
+// Server Status is refreshed by the startup initialization in uibinder.js.
 
 // Refresh statuses every hour. The status page itself refreshes every day so...
 let mojangStatusListener = setInterval(() => refreshMojangStatuses(true), 60*60*1000)

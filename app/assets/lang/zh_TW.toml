@@ -416,8 +416,9 @@ okButton = "確定"
 
 [js.uibinder.startup]
 fatalErrorTitle = "嚴重錯誤：無法載入發行索引"
-fatalErrorMessage = "無法連線至伺服器以下載發行索引，且沒有可載入的本機副本。<br><br>發行索引是提供最新伺服器資訊的必要檔案；沒有它，啟動器無法啟動。請確認您已連線至網際網路後重新啟動應用程式。"
-closeButton = "關閉"
+fatalErrorMessage = "無法載入遠端發行索引，且沒有有效的本機副本；遠端請求會在 12 秒後停止。<br><br>請確認網路連線後重試。"
+retryButton = "重試"
+exitButton = "結束 Launcher"
 
 [js.uibinder.validateAccount]
 failedMessageTitle = "無法重新整理登入"

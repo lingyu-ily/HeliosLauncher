@@ -417,8 +417,9 @@ okButton = "OK"
 
 [js.uibinder.startup]
 fatalErrorTitle = "Fatal Error: Unable to Load Distribution Index"
-fatalErrorMessage = "A connection could not be established to our servers to download the distribution index. No local copies were available to load. <br><br>The distribution index is an essential file which provides the latest server information. The launcher is unable to start without it. Ensure you are connected to the internet and relaunch the application."
-closeButton = "Close"
+fatalErrorMessage = "The remote distribution index could not be loaded, and no valid local copy was available. Remote requests are stopped after 12 seconds. <br><br>Check your internet connection and retry."
+retryButton = "Retry"
+exitButton = "Exit Launcher"
 
 [js.uibinder.validateAccount]
 failedMessageTitle = "Failed to Refresh Login"

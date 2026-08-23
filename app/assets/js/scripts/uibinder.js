@@ -9,11 +9,7 @@ const { Type }      = require('helios-distribution-types')
 const AuthManager   = require('./assets/js/authmanager')
 const ConfigManager = require('./assets/js/configmanager')
 const { DistroAPI } = require('./assets/js/distromanager')
-
-let rscShouldLoad = false
-let fatalStartupError = false
-let fatalStartupShown = false
-let startupInitializationPromise = null
+const { StartupController } = require('./assets/js/startupcontroller')
 
 // Mapping of each view to their container IDs.
 const VIEWS = {
@@ -287,11 +283,6 @@ async function showMainUI(data){
 }
 
 function showFatalStartupError(){
-    if(fatalStartupShown){
-        return
-    }
-    fatalStartupShown = true
-
     setTimeout(() => {
         $('#loadingContainer').fadeOut(250, () => {
             $('#loadSpinnerImage').removeClass('rotating')
@@ -299,36 +290,47 @@ function showFatalStartupError(){
             setOverlayContent(
                 Lang.queryJS('uibinder.startup.fatalErrorTitle'),
                 Lang.queryJS('uibinder.startup.fatalErrorMessage'),
-                Lang.queryJS('uibinder.startup.closeButton')
+                Lang.queryJS('uibinder.startup.retryButton'),
+                Lang.queryJS('uibinder.startup.exitButton')
             )
             setOverlayHandler(() => {
-                const window = remote.getCurrentWindow()
-                window.close()
+                toggleOverlay(false)
+                document.getElementById('overlayContainer').style.background = ''
+                $('#loadingContainer').stop(true, true).show()
+                $('#loadSpinnerImage').addClass('rotating')
+                void startupController.retry()
             })
-            toggleOverlay(true)
+            setDismissHandler(() => {
+                remote.getCurrentWindow().close()
+            })
+            toggleOverlay(true, true)
         })
     }, 750)
 }
 
-function initializeMainUISafely(){
-    if(startupInitializationPromise != null){
-        return startupInitializationPromise
+async function loadStartupDistribution(){
+    loggerUICore.info('Starting distribution initialization.')
+    const data = await DistroAPI.getDistribution()
+    const mainServer = data.getMainServer()
+    if(mainServer == null){
+        throw new Error('The distribution index does not contain a server.')
     }
 
-    startupInitializationPromise = (async () => {
-        try {
-            const data = await DistroAPI.getDistribution()
-            syncModConfigurations(data)
-            ensureJavaSettings(data)
-            await showMainUI(data)
-        } catch(error) {
-            fatalStartupError = true
-            loggerUICore.error('Failed to initialize the launcher UI.', error)
-            showFatalStartupError()
-        }
-    })()
+    if(ConfigManager.getSelectedServer() == null || data.getServerById(ConfigManager.getSelectedServer()) == null){
+        loggerUICore.info('Determining the default selected server.')
+        ConfigManager.setSelectedServer(mainServer.rawServer.id)
+        ConfigManager.save()
+    }
 
-    return startupInitializationPromise
+    loggerUICore.info(`Distribution initialization source: ${DistroAPI.getLastLoadSource() ?? 'memory'}.`)
+    return data
+}
+
+async function initializeLauncherUI(data){
+    syncModConfigurations(data)
+    ensureJavaSettings(data)
+    await showMainUI(data)
+    loggerUICore.info('Launcher UI initialization complete.')
 }
 
 /**
@@ -622,39 +624,23 @@ function setSelectedAccount(uuid){
     validateSelectedAccount()
 }
 
-// Synchronous Listener
-document.addEventListener('readystatechange', async () => {
-
-    if (document.readyState === 'interactive' || document.readyState === 'complete'){
-        if(rscShouldLoad){
-            rscShouldLoad = false
-            if(!fatalStartupError){
-                await initializeMainUISafely()
-            } else {
-                showFatalStartupError()
-            }
-        } 
+const startupController = new StartupController(
+    loadStartupDistribution,
+    initializeLauncherUI,
+    error => {
+        loggerUICore.error('Failed to initialize the launcher UI.', error)
+        showFatalStartupError()
     }
+)
 
-}, false)
-
-// Actions that must be performed after the distribution index is downloaded.
-ipcRenderer.on('distributionIndexDone', async (event, res) => {
-    if(res) {
-        if(document.readyState === 'interactive' || document.readyState === 'complete'){
-            await initializeMainUISafely()
-        } else {
-            rscShouldLoad = true
-        }
-    } else {
-        fatalStartupError = true
-        if(document.readyState === 'interactive' || document.readyState === 'complete'){
-            showFatalStartupError()
-        } else {
-            rscShouldLoad = true
-        }
+function startLauncherWhenReady(){
+    if(document.readyState === 'interactive' || document.readyState === 'complete'){
+        void startupController.start()
     }
-})
+}
+
+document.addEventListener('readystatechange', startLauncherWhenReady, false)
+startLauncherWhenReady()
 
 // Util for development
 async function devModeToggle() {

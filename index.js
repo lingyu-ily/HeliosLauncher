@@ -97,11 +97,6 @@ ipcMain.on('autoUpdateAction', (event, arg, data) => {
             break
     }
 })
-// Redirect distribution index event from preloader to renderer.
-ipcMain.on('distributionIndexDone', (event, res) => {
-    event.sender.send('distributionIndexDone', res)
-})
-
 // Handle trash item.
 ipcMain.handle(SHELL_OPCODE.TRASH_ITEM, async (event, ...args) => {
     try {

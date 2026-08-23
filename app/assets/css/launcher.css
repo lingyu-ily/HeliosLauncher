@@ -5871,6 +5871,10 @@ button:disabled {
     font-weight: 700;
 }
 
+#welcomeButton {
+    right: auto;
+}
+
 #welcomeButton:hover,
 #welcomeButton:focus,
 #loginButton:hover,
@@ -5925,6 +5929,7 @@ button:disabled {
 
 .loginOptionActions {
     width: 100%;
+    align-items: center;
     gap: 12px;
 }
 
@@ -6449,6 +6454,12 @@ button:disabled {
     border: 1px solid #625b55;
     background: #312e2b;
     color: #fff;
+}
+
+#overlayActionContainer {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
 }
 
 .accountListing {

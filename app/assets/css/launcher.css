@@ -8,18 +8,10 @@
  ******************************************************************************/
 
 @font-face {
-    font-family: 'Avenir Book';
-    src: url('../fonts/Cubic.ttf');
-}
-
-@font-face {
-    font-family: 'Avenir Medium';
-    src: url('../fonts/Cubic.ttf');
-}
-
-@font-face {
-    font-family: 'Ringbearer';
-    src: url('../fonts/Cubic.ttf');
+    font-family: 'Cubic';
+    src: url('../fonts/Cubic.ttf') format('truetype');
+    font-style: normal;
+    font-weight: 400;
 }
 
 /*******************************************************************************
@@ -42,7 +34,7 @@ p {
 
 /* Set default font and color. */
 body, button {
-    font-family: 'Avenir Book';
+    font-family: var(--mc-font-family);
     color: white;
 }
 
@@ -126,7 +118,7 @@ body, button {
 }
 
 #welcomeHeader {
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     text-align: center;
     color: white;
     margin-bottom: 25px;
@@ -339,7 +331,7 @@ body, button {
 
 /* Header on login view. */
 #loginSubheader {
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     margin-bottom: 25px;
     font-size: 12px;
     letter-spacing: 1px;
@@ -364,7 +356,7 @@ body, button {
 
 /* Span which displays errors related to login field content. */
 .loginErrorSpan {
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     font-weight: bold;
     font-size: 8px;
     color: #ff1b0c;
@@ -400,7 +392,7 @@ body, button {
 
 /* Login text input styles. */
 .loginField {
-    font-family: 'Avenir Book';
+    font-family: var(--mc-font-family);
     background: none;
     border-width: 1.5px 0px 0px 0px;
     border-style: solid;
@@ -1064,7 +1056,7 @@ body, button {
 }
 .settingsTabHeaderText {
     font-size: 20px;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
 }
 .settingsTabHeaderDesc {
     font-size: 12px;
@@ -1103,7 +1095,7 @@ body, button {
     background: none;
     font-size: 12px;
     border-radius: 3px;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     transition: 0.25s ease;
     cursor: pointer;
     outline: none;
@@ -1135,7 +1127,7 @@ body, button {
     background: rgba(0, 0, 0, 0.25);
     border-radius: 3px;
     border: 1px solid rgba(126, 126, 126, 0.57);
-    font-family: 'Avenir Book';
+    font-family: var(--mc-font-family);
     transition: 0.25s ease;
 }
 #settingsContainer input[type=number]:focus,
@@ -1164,7 +1156,7 @@ body, button {
 }
 .settingsFieldTitle {
     font-size: 14px;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     color: rgba(255, 255, 255, 0.95);
 }
 .settingsFieldDesc {
@@ -1312,7 +1304,7 @@ input:checked + .toggleSwitchSlider:before {
     width: 89%;
 }
 .settingsFileSelDesc strong {
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
 }
 
 /* * *
@@ -1401,7 +1393,7 @@ input:checked + .toggleSwitchSlider:before {
     font-size: 12px;
     color: grey;
     font-weight: bold;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
 }
 .settingsAuthAccountDetailValue {
     font-size: 14px;
@@ -1935,7 +1927,7 @@ input:checked + .toggleSwitchSlider:before {
 /* Release type text. */
 #settingsAboutCurrentVersionTitle {
     font-size: 12px;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     color: #23aa23;
     font-weight: bold;
 }
@@ -2013,7 +2005,7 @@ input:checked + .toggleSwitchSlider:before {
     background-color: rgba(255, 255, 255, 0.25);
     color: white;
     border-radius: 3px;
-    font-family: 'Avenir Book';
+    font-family: var(--mc-font-family);
 }
 .settingsChangelogText li+li {
     margin-top: .25em;
@@ -2123,7 +2115,7 @@ input:checked + .toggleSwitchSlider:before {
 /* Release type text. */
 #settingsUpdateVersionTitle {
     font-size: 12px;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     color: #23aa23;
     font-weight: bold;
 }
@@ -2296,7 +2288,7 @@ input:checked + .toggleSwitchSlider:before {
 #newsArticleTitle {
     font-size: 18px;
     font-weight: bold;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     color: white;
     text-decoration: none;
     transition: 0.25s ease;
@@ -2887,7 +2879,7 @@ input:checked + .toggleSwitchSlider:before {
     font-size: 30px;
     color: #848484;
     margin-left: 15px;
-    font-family: 'sans-serif';
+    font-family: var(--mc-symbol-font-family);
 }
 
 /* Tooltip which displays more details about the mojang statuses. */
@@ -2902,7 +2894,7 @@ input:checked + .toggleSwitchSlider:before {
     border-radius: 4px;
     padding: 5px 10px;
     z-index: 1;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     font-size: 12px;
     transition: visibility 0s linear 0.25s, opacity 0.25s ease;
     bottom: calc(100% + 15px);
@@ -3174,7 +3166,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Overlay title styles. */
 #overlayTitle {
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     font-size: 20px;
     font-weight: bold;
     letter-spacing: 1px;
@@ -3200,7 +3192,7 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     border: 1px solid #ffffff;
     color: white;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     font-weight: bold;
     border-radius: 2px;
     padding: 0px 8.1px;
@@ -3250,7 +3242,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Account selection header. */
 #accountSelectHeader {
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     font-size: 20px;
     font-weight: bold;
     color: #fff;
@@ -3438,7 +3430,7 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     border: 1px solid #ffffff;
     color: white;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     font-weight: bold;
     border-radius: 2px;
     padding: 0px 8.1px;
@@ -3544,6 +3536,8 @@ input:checked + .toggleSwitchSlider:before {
  ******************************************************************************/
 
 :root {
+    --mc-font-family: 'Cubic', sans-serif;
+    --mc-symbol-font-family: 'Segoe UI Symbol', 'Segoe UI Emoji', sans-serif;
     --mc-bg: #181716;
     --mc-surface: #242220;
     --mc-surface-raised: #2e2b29;
@@ -3570,8 +3564,8 @@ html, body {
     background: var(--mc-bg) !important;
 }
 
-body, button, input, select {
-    font-family: "Segoe UI", "Microsoft JhengHei", "Avenir Book", sans-serif;
+body, button, input, select, textarea {
+    font-family: var(--mc-font-family);
 }
 
 button:focus-visible,
@@ -3916,6 +3910,7 @@ button:disabled {
 
 .sidebarChevron,
 .actionChevron {
+    font-family: var(--mc-symbol-font-family);
     color: #ddd;
     font-size: 20px;
     line-height: 1;
@@ -3972,6 +3967,7 @@ button:disabled {
     display: inline-grid;
     place-items: center;
     color: #dedad5;
+    font-family: var(--mc-symbol-font-family);
     font-size: 19px;
 }
 
@@ -4878,7 +4874,9 @@ button:disabled {
     border-radius: 0;
     background: rgba(17, 16, 15, 0.88);
     box-shadow: inset 0 -2px rgba(0, 0, 0, 0.55);
-    font: 700 15px "Segoe UI Symbol", "Segoe UI Emoji", sans-serif;
+    font-family: var(--mc-symbol-font-family);
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
     transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
 }
@@ -5023,7 +5021,7 @@ button:disabled {
     max-width: 100%;
     margin-top: -9px;
     color: #fff;
-    font-family: "Avenir Medium", "Segoe UI", sans-serif;
+    font-family: var(--mc-font-family);
     font-size: clamp(30px, 4vw, 52px);
     font-weight: 900;
     letter-spacing: 3px;
@@ -5714,7 +5712,7 @@ button:disabled {
 
 .newsFullArticleTitle {
     color: #fff;
-    font-family: 'Avenir Medium';
+    font-family: var(--mc-font-family);
     font-size: 18px;
     font-weight: bold;
     outline: none;
@@ -5793,6 +5791,7 @@ button:disabled {
     background: #1b1a19;
     color: #fff;
     cursor: pointer;
+    font-family: var(--mc-symbol-font-family);
     font-size: 18px;
 }
 
@@ -6368,6 +6367,7 @@ button:disabled {
     background: transparent;
     box-shadow: none;
     color: #fff;
+    font-family: var(--mc-symbol-font-family);
     font-size: 13px;
     font-weight: 800;
     line-height: 1;

@@ -34,8 +34,19 @@
         <%- include('loginOptions') %>
         <div id="launcherShell" style="display: none;">
             <%- include('sidebar') %>
-            <%- include('settings') %>
-            <%- include('landing') %>
+            <div id="launcherMain">
+                <div id="launch_details" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+                    <div id="launch_details_right">
+                        <div id="launch_details_summary">
+                            <span id="launch_details_text"><%- lang('landing.launchDetails') %></span>
+                            <span id="launch_progress_label" aria-hidden="true">0%</span>
+                        </div>
+                        <progress id="launch_progress" value="0" max="100" aria-labelledby="launch_details_text"></progress>
+                    </div>
+                </div>
+                <%- include('settings') %>
+                <%- include('landing') %>
+            </div>
         </div>
     </div>
     <%- include('overlay') %>

@@ -6278,6 +6278,102 @@ button:disabled {
     border-left: 0;
 }
 
+.settingsInstanceCleanup {
+    width: min(100%, 900px);
+    margin: 0 0 28px;
+    padding: 0 0 28px;
+    border-bottom: 1px solid #302e2c;
+}
+
+.settingsInstanceCleanupHeader,
+.settingsInstanceCleanupActions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.settingsInstanceCleanupHeader {
+    flex-wrap: wrap;
+}
+
+.settingsInstanceCleanupStatus {
+    min-height: 20px;
+    margin: 14px 0 10px;
+    color: var(--mc-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.settingsInstanceCleanupSelectAll {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 8px;
+    color: #dedbd8;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.settingsInstanceCleanupSelectAll[hidden] {
+    display: none;
+}
+
+.settingsInstanceCleanupList {
+    display: grid;
+    gap: 6px;
+}
+
+.settingsInstanceCleanupItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #49443f;
+    background: #1d1c1b;
+    cursor: pointer;
+}
+
+.settingsInstanceCleanupItem:has(input:checked) {
+    border-color: #a64b45;
+    background: #2a1d1b;
+}
+
+.settingsInstanceCleanupItem input,
+.settingsInstanceCleanupSelectAll input {
+    flex: 0 0 auto;
+    margin: 2px 0 0;
+    accent-color: #b5524b;
+}
+
+.settingsInstanceCleanupItemDetails {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.settingsInstanceCleanupItemName {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+.settingsInstanceCleanupItemPath {
+    color: var(--mc-muted);
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 10px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    user-select: text;
+}
+
+.settingsInstanceCleanupActions {
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
 .mcButtonDanger {
     border: 1px solid #a64b45;
     background: #371f1d;

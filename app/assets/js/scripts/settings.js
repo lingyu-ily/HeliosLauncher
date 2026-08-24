@@ -2,10 +2,17 @@
 const semver = require('semver')
 
 const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = require('./assets/js/ipcconstants')
+const InstanceCleanup = require('./assets/js/instancecleanup')
 const settingsLogger = LoggerUtil.getLogger('Settings')
 
 const settingsState = {
     invalid: new Set()
+}
+
+const settingsInstanceCleanupState = {
+    instances: [],
+    busy: false,
+    scanSequence: 0
 }
 
 function bindSettingsSelect(){
@@ -58,12 +65,207 @@ function bindFileSelectors(){
             const res = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), options)
             if(!res.canceled) {
                 ele.previousElementSibling.value = res.filePaths[0]
+                if(ele.previousElementSibling.getAttribute('cValue') === 'DataDirectory') {
+                    void refreshStaleInstances()
+                }
             }
         }
     }
 }
 
 bindFileSelectors()
+
+const settingsInstanceCleanupStatus = document.getElementById('settingsInstanceCleanupStatus')
+const settingsInstanceCleanupList = document.getElementById('settingsInstanceCleanupList')
+const settingsInstanceCleanupRefresh = document.getElementById('settingsInstanceCleanupRefresh')
+const settingsInstanceCleanupSelectAllWrapper = document.getElementById('settingsInstanceCleanupSelectAllWrapper')
+const settingsInstanceCleanupSelectAll = document.getElementById('settingsInstanceCleanupSelectAll')
+const settingsInstanceCleanupDelete = document.getElementById('settingsInstanceCleanupDelete')
+
+function getInstanceCleanupDirectory() {
+    const dataDirectoryInput = document.querySelector('[cValue="DataDirectory"]')
+    const dataDirectory = dataDirectoryInput?.value && dataDirectoryInput.value !== 'null'
+        ? dataDirectoryInput.value
+        : ConfigManager.getDataDirectory()
+    return require('path').join(dataDirectory, 'instances')
+}
+
+async function getCurrentServerIds() {
+    const distribution = await DistroAPI.getDistribution()
+    return distribution.servers.map(server => server.rawServer.id)
+}
+
+function getSelectedStaleInstanceIds() {
+    return Array.from(settingsInstanceCleanupList.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(checkbox => checkbox.dataset.instanceId)
+}
+
+function syncInstanceCleanupSelection() {
+    const checkboxes = Array.from(settingsInstanceCleanupList.querySelectorAll('input[type="checkbox"]'))
+    const selectedCount = checkboxes.filter(checkbox => checkbox.checked).length
+    settingsInstanceCleanupSelectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length
+    settingsInstanceCleanupSelectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length
+    settingsInstanceCleanupDelete.disabled = settingsInstanceCleanupState.busy || selectedCount === 0
+}
+
+function setInstanceCleanupBusy(busy) {
+    settingsInstanceCleanupState.busy = busy
+    settingsInstanceCleanupRefresh.disabled = busy
+    settingsInstanceCleanupSelectAll.disabled = busy
+    const dataDirectoryButton = document.querySelector('[cValue="DataDirectory"] + .settingsFileSelButton')
+    if(dataDirectoryButton != null) {
+        dataDirectoryButton.disabled = busy
+    }
+    for(const checkbox of settingsInstanceCleanupList.querySelectorAll('input[type="checkbox"]')) {
+        checkbox.disabled = busy
+    }
+    syncInstanceCleanupSelection()
+}
+
+function renderStaleInstances(instances) {
+    const fragment = document.createDocumentFragment()
+    for(const instance of instances) {
+        const label = document.createElement('label')
+        label.className = 'settingsInstanceCleanupItem'
+
+        const checkbox = document.createElement('input')
+        checkbox.type = 'checkbox'
+        checkbox.dataset.instanceId = instance.id
+        checkbox.onchange = syncInstanceCleanupSelection
+
+        const details = document.createElement('span')
+        details.className = 'settingsInstanceCleanupItemDetails'
+        const name = document.createElement('span')
+        name.className = 'settingsInstanceCleanupItemName'
+        name.textContent = instance.id
+        const instancePath = document.createElement('span')
+        instancePath.className = 'settingsInstanceCleanupItemPath'
+        instancePath.textContent = instance.path
+        details.append(name, instancePath)
+        label.append(checkbox, details)
+        fragment.appendChild(label)
+    }
+
+    settingsInstanceCleanupList.replaceChildren(fragment)
+    settingsInstanceCleanupSelectAllWrapper.hidden = instances.length === 0
+    settingsInstanceCleanupSelectAll.checked = false
+    settingsInstanceCleanupSelectAll.indeterminate = false
+    syncInstanceCleanupSelection()
+}
+
+async function refreshStaleInstances() {
+    const scanSequence = ++settingsInstanceCleanupState.scanSequence
+    setInstanceCleanupBusy(true)
+    settingsInstanceCleanupStatus.textContent = Lang.queryJS('settings.instanceCleanup.scanning')
+    try {
+        const activeServerIds = await getCurrentServerIds()
+        const instances = await InstanceCleanup.scanStaleInstances(getInstanceCleanupDirectory(), activeServerIds)
+        if(scanSequence !== settingsInstanceCleanupState.scanSequence) {
+            return
+        }
+        settingsInstanceCleanupState.instances = instances
+        renderStaleInstances(instances)
+        settingsInstanceCleanupStatus.textContent = instances.length === 0
+            ? Lang.queryJS('settings.instanceCleanup.empty')
+            : Lang.queryJS('settings.instanceCleanup.found', { count: instances.length })
+    } catch(error) {
+        if(scanSequence !== settingsInstanceCleanupState.scanSequence) {
+            return
+        }
+        settingsLogger.error('Failed to scan residual instances.', error)
+        settingsInstanceCleanupState.instances = []
+        renderStaleInstances([])
+        settingsInstanceCleanupStatus.textContent = Lang.queryJS('settings.instanceCleanup.scanFailed')
+    } finally {
+        if(scanSequence === settingsInstanceCleanupState.scanSequence) {
+            setInstanceCleanupBusy(false)
+        }
+    }
+}
+
+function escapeInstanceCleanupText(value) {
+    const element = document.createElement('span')
+    element.textContent = value
+    return element.innerHTML
+}
+
+function showInstanceCleanupResult(result) {
+    const total = result.deleted.length + result.failed.length
+    if(result.failed.length === 0) {
+        setOverlayContent(
+            Lang.queryJS('settings.instanceCleanup.completeTitle'),
+            Lang.queryJS('settings.instanceCleanup.completeMessage', { count: result.deleted.length }),
+            Lang.queryJS('settings.instanceCleanup.okButton')
+        )
+    } else {
+        const failed = result.failed
+            .map(item => escapeInstanceCleanupText(item.id))
+            .join('<br>')
+        setOverlayContent(
+            Lang.queryJS('settings.instanceCleanup.partialTitle'),
+            Lang.queryJS('settings.instanceCleanup.partialMessage', {
+                success: result.deleted.length,
+                total,
+                failed
+            }),
+            Lang.queryJS('settings.instanceCleanup.okButton')
+        )
+    }
+    setOverlayHandler(() => toggleOverlay(false))
+    toggleOverlay(true)
+}
+
+async function deleteSelectedStaleInstances(instanceIds) {
+    const instanceDirectory = getInstanceCleanupDirectory()
+    setInstanceCleanupBusy(true)
+    const result = await InstanceCleanup.deleteStaleInstances(
+        instanceDirectory,
+        instanceIds,
+        getCurrentServerIds,
+        {
+            onProgress: progress => {
+                settingsInstanceCleanupStatus.textContent = Lang.queryJS('settings.instanceCleanup.deleting', {
+                    name: progress.id,
+                    completed: progress.completed,
+                    total: progress.total
+                })
+            }
+        }
+    )
+    for(const failure of result.failed) {
+        settingsLogger.error(`Failed to permanently delete residual instance ${failure.id}.`, failure.error)
+    }
+    await refreshStaleInstances()
+    showInstanceCleanupResult(result)
+}
+
+function confirmStaleInstanceDeletion() {
+    const instanceIds = getSelectedStaleInstanceIds()
+    if(instanceIds.length === 0 || settingsInstanceCleanupState.busy) {
+        return
+    }
+    setOverlayContent(
+        Lang.queryJS('settings.instanceCleanup.confirmTitle'),
+        Lang.queryJS('settings.instanceCleanup.confirmMessage', { count: instanceIds.length }),
+        Lang.queryJS('settings.instanceCleanup.confirmButton'),
+        Lang.queryJS('settings.instanceCleanup.cancelButton')
+    )
+    setOverlayHandler(() => {
+        toggleOverlay(false)
+        void deleteSelectedStaleInstances(instanceIds)
+    })
+    setDismissHandler(() => toggleOverlay(false))
+    toggleOverlay(true, true)
+}
+
+settingsInstanceCleanupRefresh.onclick = () => void refreshStaleInstances()
+settingsInstanceCleanupDelete.onclick = confirmStaleInstanceDeletion
+settingsInstanceCleanupSelectAll.onchange = () => {
+    for(const checkbox of settingsInstanceCleanupList.querySelectorAll('input[type="checkbox"]')) {
+        checkbox.checked = settingsInstanceCleanupSelectAll.checked
+    }
+    syncInstanceCleanupSelection()
+}
 
 
 /**
@@ -960,6 +1162,9 @@ async function prepareSettings(first = false) {
     await initSettingsValues()
     prepareAccountsTab()
     prepareAboutTab()
+    if(!first) {
+        await refreshStaleInstances()
+    }
 }
 
 // Prepare the settings UI on startup.

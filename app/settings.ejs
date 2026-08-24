@@ -144,6 +144,24 @@
                 </div>
                 <div class="settingsFileSelDesc"><%- lang('settings.dataDirectoryDesc') %></div>
             </div>
+            <section id="settingsInstanceCleanup" class="settingsInstanceCleanup" aria-labelledby="settingsInstanceCleanupTitle">
+                <div class="settingsInstanceCleanupHeader">
+                    <div>
+                        <div class="settingsFieldTitle" id="settingsInstanceCleanupTitle"><%- lang('settings.instanceCleanupTitle') %></div>
+                        <div class="settingsFieldDesc"><%- lang('settings.instanceCleanupDesc') %></div>
+                    </div>
+                    <button id="settingsInstanceCleanupRefresh" class="mcButtonSecondary mcButtonCompact" type="button"><%- lang('settings.instanceCleanupRefresh') %></button>
+                </div>
+                <div id="settingsInstanceCleanupStatus" class="settingsInstanceCleanupStatus" role="status" aria-live="polite"><%- lang('settings.instanceCleanupNotScanned') %></div>
+                <label id="settingsInstanceCleanupSelectAllWrapper" class="settingsInstanceCleanupSelectAll" hidden>
+                    <input id="settingsInstanceCleanupSelectAll" type="checkbox">
+                    <span><%- lang('settings.instanceCleanupSelectAll') %></span>
+                </label>
+                <div id="settingsInstanceCleanupList" class="settingsInstanceCleanupList"></div>
+                <div class="settingsInstanceCleanupActions">
+                    <button id="settingsInstanceCleanupDelete" class="mcButtonDanger" type="button" disabled><%- lang('settings.instanceCleanupDelete') %></button>
+                </div>
+            </section>
         </div>
         <div id="settingsTabAbout" class="settingsTab" role="tabpanel" aria-labelledby="settingsNavAbout" aria-hidden="true" tabindex="0" hidden>
             <div class="settingsTabHeader">

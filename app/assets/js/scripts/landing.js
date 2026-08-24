@@ -36,6 +36,7 @@ const {
 
 // Internal Requirements
 const DiscordWrapper          = require('./assets/js/discordwrapper')
+const { DiscordPresenceController } = require('./assets/js/discordpresence')
 const ProcessBuilder          = require('./assets/js/processbuilder')
 
 // Launch Elements
@@ -1435,8 +1436,7 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true, serverId =
 
 // Keep reference to Minecraft Process
 let proc
-// Is DiscordRPC enabled
-let hasRPC = false
+const discordPresence = new DiscordPresenceController(DiscordWrapper)
 // Joined server regex
 // Change this if your server uses something different.
 const GAME_JOINED_REGEX = /\[.+\]: Sound engine started/
@@ -1560,8 +1560,8 @@ async function dlAsync(login = true) {
 
         const onLoadComplete = () => {
             toggleLaunchArea(false)
-            if(hasRPC){
-                DiscordWrapper.updateDetails(Lang.queryJS('landing.discord.loading'))
+            if(discordPresence.isActive()){
+                discordPresence.updateDetails(Lang.queryJS('landing.discord.loading'))
                 proc.stdout.on('data', gameStateChange)
             }
             proc.stdout.removeListener('data', tempListener)
@@ -1588,9 +1588,9 @@ async function dlAsync(login = true) {
         const gameStateChange = function(data){
             data = data.trim()
             if(SERVER_JOINED_REGEX.test(data)){
-                DiscordWrapper.updateDetails(Lang.queryJS('landing.discord.joined'))
+                discordPresence.updateDetails(Lang.queryJS('landing.discord.joined'))
             } else if(GAME_JOINED_REGEX.test(data)){
-                DiscordWrapper.updateDetails(Lang.queryJS('landing.discord.joining'))
+                discordPresence.updateDetails(Lang.queryJS('landing.discord.joining'))
             }
         }
 
@@ -1609,20 +1609,21 @@ async function dlAsync(login = true) {
             // Bind listeners to stdout.
             proc.stdout.on('data', tempListener)
             proc.stderr.on('data', gameErrorListener)
+            discordPresence.bindProcess(proc, wasActive => {
+                if(wasActive){
+                    loggerLaunchSuite.info('Shutting down Discord Rich Presence..')
+                }
+                proc = null
+            })
 
             setLaunchDetails(Lang.queryJS('landing.dlAsync.doneEnjoyServer'))
 
             // Init Discord Hook
-            if(distro.rawDistribution.discord != null && serv.rawServer.discord != null){
-                DiscordWrapper.initRPC(distro.rawDistribution.discord, serv.rawServer.discord)
-                hasRPC = true
-                proc.on('close', (code, signal) => {
-                    loggerLaunchSuite.info('Shutting down Discord Rich Presence..')
-                    DiscordWrapper.shutdownRPC()
-                    hasRPC = false
-                    proc = null
-                })
-            }
+            discordPresence.initialize(
+                ConfigManager.getDiscordRichPresence(),
+                distro.rawDistribution.discord,
+                serv.rawServer.discord
+            )
 
         } catch(err) {
 

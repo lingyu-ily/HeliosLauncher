@@ -82,7 +82,8 @@ const DEFAULT_CONFIG = {
             resHeight: 720,
             fullscreen: false,
             autoConnect: true,
-            launchDetached: true
+            launchDetached: true,
+            discordRichPresence: true
         },
         launcher: {
             allowPrerelease: false,
@@ -801,6 +802,26 @@ exports.getLaunchDetached = function(def = false){
  */
 exports.setLaunchDetached = function(launchDetached){
     config.settings.game.launchDetached = launchDetached
+}
+
+/**
+ * Check whether Discord Rich Presence should be enabled for game launches.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {boolean} Whether Discord Rich Presence is enabled.
+ */
+exports.getDiscordRichPresence = function(def = false){
+    const value = def ? DEFAULT_CONFIG.settings.game.discordRichPresence : config.settings.game.discordRichPresence
+    return Boolean(value)
+}
+
+/**
+ * Change whether Discord Rich Presence should be enabled for future game launches.
+ *
+ * @param {boolean} enabled Whether Discord Rich Presence is enabled.
+ */
+exports.setDiscordRichPresence = function(enabled){
+    config.settings.game.discordRichPresence = Boolean(enabled)
 }
 
 // Launcher Settings

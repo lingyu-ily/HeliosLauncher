@@ -7,6 +7,7 @@ const path          = require('path')
 const { Type }      = require('helios-distribution-types')
 
 const AuthManager   = require('./assets/js/authmanager')
+const AnonymousUsage = require('./assets/js/anonymoususage')
 const ConfigManager = require('./assets/js/configmanager')
 const { DistroAPI } = require('./assets/js/distromanager')
 const { StartupController } = require('./assets/js/startupcontroller')
@@ -330,6 +331,7 @@ async function initializeLauncherUI(data){
     syncModConfigurations(data)
     ensureJavaSettings(data)
     await showMainUI(data)
+    void AnonymousUsage.reportAnonymousUsage(data)
     loggerUICore.info('Launcher UI initialization complete.')
 }
 

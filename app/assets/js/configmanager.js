@@ -87,6 +87,7 @@ const DEFAULT_CONFIG = {
         },
         launcher: {
             allowPrerelease: false,
+            anonymousUsage: true,
             playHeroVideos: true,
             heroVideoVolume: 100,
             dataDirectory: dataPath
@@ -95,6 +96,11 @@ const DEFAULT_CONFIG = {
     newsCache: {
         version: 2,
         entries: {}
+    },
+    anonymousUsageState: {
+        date: null,
+        scope: null,
+        dailyToken: null
     },
     clientToken: null,
     selectedServer: null, // Resolved
@@ -843,6 +849,46 @@ exports.getAllowPrerelease = function(def = false){
  */
 exports.setAllowPrerelease = function(allowPrerelease){
     config.settings.launcher.allowPrerelease = allowPrerelease
+}
+
+/**
+ * Check whether privacy-preserving daily Launcher usage should be reported.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {boolean} Whether anonymous daily usage is enabled.
+ */
+exports.getAnonymousUsage = function(def = false){
+    const value = def ? DEFAULT_CONFIG.settings.launcher.anonymousUsage : config.settings.launcher.anonymousUsage
+    return Boolean(value)
+}
+
+/**
+ * Change whether anonymous daily Launcher usage should be reported.
+ * Disabling also removes the current local daily token.
+ *
+ * @param {boolean} enabled Whether anonymous daily usage is enabled.
+ */
+exports.setAnonymousUsage = function(enabled){
+    config.settings.launcher.anonymousUsage = Boolean(enabled)
+    if(!enabled) {
+        exports.clearAnonymousUsageState()
+    }
+}
+
+exports.getAnonymousUsageState = function(){
+    return { ...config.anonymousUsageState }
+}
+
+exports.setAnonymousUsageState = function(state){
+    config.anonymousUsageState = {
+        date: state.date,
+        scope: state.scope,
+        dailyToken: state.dailyToken
+    }
+}
+
+exports.clearAnonymousUsageState = function(){
+    config.anonymousUsageState = { date: null, scope: null, dailyToken: null }
 }
 
 /**

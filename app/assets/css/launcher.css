@@ -6162,6 +6162,10 @@ button:disabled {
     padding: 13px 0;
 }
 
+.settingsDataDirContainer {
+    margin-top: 20px;
+}
+
 #settingsGameResolutionContainer,
 .settingsSelServContainer,
 #settingsUpdateStatusContainer {

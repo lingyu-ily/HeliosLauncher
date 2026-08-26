@@ -10,6 +10,10 @@ const AuthManager   = require('./assets/js/authmanager')
 const AnonymousUsage = require('./assets/js/anonymoususage')
 const ConfigManager = require('./assets/js/configmanager')
 const { DistroAPI } = require('./assets/js/distromanager')
+const {
+    DistributionNoticeController,
+    DistributionRefreshController
+} = require('./assets/js/distributionrefreshcontroller')
 const { StartupController } = require('./assets/js/startupcontroller')
 
 // Mapping of each view to their container IDs.
@@ -238,6 +242,63 @@ function getCurrentView(){
     return currentView
 }
 
+function renderDistributionNotice(state){
+    const notice = document.getElementById('distributionNotice')
+    const icon = document.getElementById('distributionNoticeIcon')
+    const message = document.getElementById('distributionNoticeMessage')
+    const retryButton = document.getElementById('distributionNoticeRetry')
+    const closeButton = document.getElementById('distributionNoticeClose')
+    if(notice == null || icon == null || message == null || retryButton == null || closeButton == null){
+        return
+    }
+
+    const hidden = state === 'hidden'
+    notice.dataset.state = state
+    notice.setAttribute('aria-hidden', hidden ? 'true' : 'false')
+    closeButton.setAttribute('aria-label', Lang.queryJS('uibinder.distributionNotice.closeButton'))
+    closeButton.title = Lang.queryJS('uibinder.distributionNotice.closeButton')
+
+    if(hidden){
+        return
+    }
+
+    const success = state === 'success'
+    icon.textContent = success ? '✓' : '!'
+    message.textContent = Lang.queryJS(success
+        ? 'uibinder.distributionNotice.successMessage'
+        : 'uibinder.distributionNotice.offlineMessage')
+    retryButton.hidden = success
+    retryButton.disabled = state === 'retrying'
+    retryButton.textContent = Lang.queryJS(state === 'retrying'
+        ? 'uibinder.distributionNotice.retryingButton'
+        : 'uibinder.distributionNotice.retryButton')
+}
+
+const distributionNoticeController = new DistributionNoticeController(renderDistributionNotice)
+
+function isDistributionNoticeVisible(){
+    const state = document.getElementById('distributionNotice')?.dataset.state
+    return state != null && state !== 'hidden'
+}
+
+function bindDistributionNotice(){
+    const notice = document.getElementById('distributionNotice')
+    const retryButton = document.getElementById('distributionNoticeRetry')
+    const closeButton = document.getElementById('distributionNoticeClose')
+    if(notice == null || retryButton == null || closeButton == null || notice.hasAttribute('bound')){
+        return
+    }
+
+    notice.setAttribute('bound', '')
+    renderDistributionNotice('hidden')
+    retryButton.addEventListener('click', () => {
+        void refreshDistributionIndex({ showProgress: true, announceRecovery: true }).catch(error => {
+            loggerUICore.error('Unable to retry the distribution index refresh.', error)
+        })
+    })
+    closeButton.addEventListener('click', () => distributionNoticeController.hide())
+}
+
 async function showMainUI(data){
 
     if(!isDev){
@@ -284,6 +345,9 @@ async function showMainUI(data){
         setTimeout(() => {
             $('#loadingContainer').fadeOut(500, () => {
                 $('#loadSpinnerImage').removeClass('rotating')
+                if(DistroAPI.getLastLoadSource() === 'cache'){
+                    distributionNoticeController.showUnavailable()
+                }
             })
         }, 250)
         
@@ -353,6 +417,24 @@ function onDistroRefresh(data){
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
     syncServerStatusView()
     ensureJavaSettings(data)
+}
+
+const distributionRefreshController = new DistributionRefreshController(
+    () => DistroAPI.refreshDistributionOrFallback(),
+    () => DistroAPI.getLastLoadSource(),
+    onDistroRefresh,
+    {
+        onUnavailable: () => distributionNoticeController.showUnavailable(),
+        onRetrying: () => distributionNoticeController.showRetrying(),
+        onSuccess: () => distributionNoticeController.showSuccess()
+    }
+)
+
+function refreshDistributionIndex(options = {}){
+    return distributionRefreshController.refresh({
+        showProgress: options.showProgress === true,
+        announceRecovery: options.announceRecovery === true || isDistributionNoticeVisible()
+    })
 }
 
 /**
@@ -644,6 +726,7 @@ const startupController = new StartupController(
 
 function startLauncherWhenReady(){
     if(document.readyState === 'interactive' || document.readyState === 'complete'){
+        bindDistributionNotice()
         void startupController.start()
     }
 }

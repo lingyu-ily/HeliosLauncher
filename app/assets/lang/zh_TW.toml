@@ -447,6 +447,13 @@ fatalErrorMessage = "無法載入遠端發行索引，且沒有有效的本機�
 retryButton = "重試"
 exitButton = "結束 Launcher"
 
+[js.uibinder.distributionNotice]
+offlineMessage = "目前無法取得最新發行資料，Launcher 正使用本機快取。"
+retryButton = "重試"
+retryingButton = "正在重試…"
+successMessage = "已成功取得最新發行資料。"
+closeButton = "關閉離線提示"
+
 [js.uibinder.validateAccount]
 failedMessageTitle = "無法重新整理登入"
 failedMessage = "無法重新整理 <strong>{account}</strong> 的登入。請選擇其他帳號或再次登入。"

@@ -1730,8 +1730,7 @@ async function dlAsync(login = true) {
     let distro
 
     try {
-        distro = await DistroAPI.refreshDistributionOrFallback()
-        onDistroRefresh(distro)
+        distro = await refreshDistributionIndex()
     } catch(err) {
         loggerLaunchSuite.error('Unable to refresh distribution index.', err)
         showLaunchFailure(Lang.queryJS('landing.dlAsync.fatalError'), Lang.queryJS('landing.dlAsync.unableToLoadDistributionIndex'))

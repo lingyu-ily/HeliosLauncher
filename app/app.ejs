@@ -28,6 +28,14 @@
 </head>
 <body bkid="<%=bkid%>">
     <div id="main">
+        <div id="distributionNotice" data-state="hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+            <span id="distributionNoticeIcon" aria-hidden="true">!</span>
+            <span id="distributionNoticeMessage"></span>
+            <div id="distributionNoticeActions">
+                <button id="distributionNoticeRetry" type="button"></button>
+                <button id="distributionNoticeClose" type="button" aria-label="">×</button>
+            </div>
+        </div>
         <%- include('welcome') %>
         <%- include('login') %>
         <%- include('waiting') %>

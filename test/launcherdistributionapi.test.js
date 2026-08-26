@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { mkdtemp, rm, writeFile } = require('node:fs/promises')
+const { mkdtemp, rm, unlink, writeFile } = require('node:fs/promises')
 const { createServer } = require('node:http')
 const { tmpdir } = require('node:os')
 const { join } = require('node:path')
@@ -10,12 +10,12 @@ const {
     REMOTE_DISTRO_TIMEOUT_MS
 } = require('../app/assets/js/launcherdistributionapi')
 
-function distributionFixture() {
+function distributionFixture(serverId = 'main-1.20.1') {
     return {
         version: '1.0.0',
         rss: '',
         servers: [{
-            id: 'main-1.20.1',
+            id: serverId,
             name: 'Main',
             description: '',
             icon: '',
@@ -114,4 +114,42 @@ test('fails cleanly when neither the remote nor cache is available', async t => 
         /Unable to load distribution from remote server or local disk/
     )
     assert.equal(api.getLastLoadSource(), null)
+})
+
+test('keeps the current distribution during an offline refresh and replaces it after recovery', async t => {
+    const launcherDirectory = await temporaryLauncherDirectory()
+    t.after(() => rm(launcherDirectory, { recursive: true, force: true }))
+    const distributionPath = join(launcherDirectory, 'distribution.json')
+    await writeFile(distributionPath, JSON.stringify(distributionFixture('cached-server')))
+    let online = false
+    const requestClient = {
+        get: async () => {
+            if(!online){
+                throw new Error('offline')
+            }
+            return { body: distributionFixture('remote-server') }
+        }
+    }
+    const api = new LauncherDistributionAPI(
+        launcherDirectory,
+        join(launcherDirectory, 'common'),
+        join(launcherDirectory, 'instances'),
+        'https://distribution.example.test/distribution.json',
+        false,
+        { requestClient }
+    )
+
+    const cached = await api.getDistribution()
+    assert.equal(cached.getMainServer().rawServer.id, 'cached-server')
+    assert.equal(api.getLastLoadSource(), 'cache')
+
+    await unlink(distributionPath)
+    const offlineRefresh = await api.refreshDistributionOrFallback()
+    assert.strictEqual(offlineRefresh, cached)
+    assert.equal(api.getLastLoadSource(), null)
+
+    online = true
+    const recovered = await api.refreshDistributionOrFallback()
+    assert.equal(recovered.getMainServer().rawServer.id, 'remote-server')
+    assert.equal(api.getLastLoadSource(), 'remote')
 })

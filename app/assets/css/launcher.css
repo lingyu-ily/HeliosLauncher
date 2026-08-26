@@ -3589,6 +3589,105 @@ button:disabled {
     filter: none !important;
 }
 
+/* Distribution connection notice */
+#distributionNotice {
+    position: absolute;
+    z-index: 1000;
+    top: 0;
+    right: 0;
+    left: 0;
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 2px solid #d08a35;
+    background: #75400f;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    color: #fff8e9;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(calc(-100% - 10px));
+    visibility: hidden;
+    transition: transform 220ms ease, opacity 180ms ease, visibility 0s linear 220ms, background-color 180ms ease, border-color 180ms ease;
+}
+
+#distributionNotice[data-state='offline'],
+#distributionNotice[data-state='retrying'],
+#distributionNotice[data-state='success'] {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+    visibility: visible;
+    transition-delay: 0s;
+}
+
+#distributionNotice[data-state='success'] {
+    border-bottom-color: #70ba58;
+    background: #2f6e1e;
+    color: #f3ffef;
+}
+
+#distributionNoticeIcon {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid currentColor;
+    font-family: var(--mc-symbol-font-family);
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+#distributionNoticeMessage {
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+#distributionNoticeActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#distributionNoticeRetry,
+#distributionNoticeClose {
+    min-height: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.62);
+    background: rgba(0, 0, 0, 0.22);
+    color: inherit;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+#distributionNoticeRetry {
+    min-width: 76px;
+    padding: 0 14px;
+}
+
+#distributionNoticeClose {
+    width: 32px;
+    padding: 0;
+    font-family: var(--mc-symbol-font-family);
+    font-size: 22px;
+    line-height: 1;
+}
+
+#distributionNoticeRetry:hover:not(:disabled),
+#distributionNoticeClose:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+#distributionNoticeRetry[hidden] {
+    display: none;
+}
+
 /* Shared launcher shell */
 #launcherShell {
     width: 100%;

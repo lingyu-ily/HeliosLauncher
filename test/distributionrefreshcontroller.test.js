@@ -52,6 +52,55 @@ test('cancels the pending success dismissal when another state is shown', () => 
     assert.deepEqual(states, ['success', 'offline'])
 })
 
+test('calls browser-style timer functions with their timer host', () => {
+    const states = []
+    const timerCalls = []
+    let scheduledCallback
+    const timerHost = {
+        setTimeout(callback, delay) {
+            assert.strictEqual(this, timerHost)
+            scheduledCallback = callback
+            timerCalls.push(['schedule', delay])
+            return 7
+        },
+        clearTimeout(timer) {
+            assert.strictEqual(this, timerHost)
+            timerCalls.push(['cancel', timer])
+        }
+    }
+    const notice = new DistributionNoticeController(
+        state => states.push(state),
+        { timerHost }
+    )
+
+    notice.showSuccess()
+    notice.showUnavailable()
+    scheduledCallback()
+
+    assert.deepEqual(timerCalls, [
+        ['schedule', DISTRIBUTION_NOTICE_SUCCESS_MS],
+        ['cancel', 7]
+    ])
+    assert.deepEqual(states, ['success', 'offline'])
+})
+
+test('hides the success notice if its timer cannot be scheduled', () => {
+    const states = []
+    const timerHost = {
+        setTimeout() {
+            throw new Error('timer unavailable')
+        },
+        clearTimeout() {}
+    }
+    const notice = new DistributionNoticeController(
+        state => states.push(state),
+        { timerHost }
+    )
+
+    assert.throws(() => notice.showSuccess(), /timer unavailable/)
+    assert.deepEqual(states, ['success', 'hidden'])
+})
+
 test('deduplicates concurrent distribution refresh requests', async () => {
     let refreshCalls = 0
     let applyCalls = 0

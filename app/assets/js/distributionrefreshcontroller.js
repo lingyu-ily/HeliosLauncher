@@ -5,14 +5,15 @@ class DistributionNoticeController {
     constructor(render, options = {}) {
         this.render = render
         this.successDurationMs = options.successDurationMs ?? DISTRIBUTION_NOTICE_SUCCESS_MS
-        this.schedule = options.schedule ?? setTimeout
-        this.cancel = options.cancel ?? clearTimeout
+        this.timerHost = options.timerHost ?? globalThis
+        this.schedule = options.schedule ?? this.timerHost.setTimeout
+        this.cancel = options.cancel ?? this.timerHost.clearTimeout
         this.successTimer = null
     }
 
     setState(state) {
         if(this.successTimer != null){
-            this.cancel(this.successTimer)
+            this.cancel.call(this.timerHost, this.successTimer)
             this.successTimer = null
         }
         this.render(state)
@@ -28,13 +29,19 @@ class DistributionNoticeController {
 
     showSuccess() {
         this.setState('success')
-        const timer = this.schedule(() => {
-            if(this.successTimer === timer){
-                this.successTimer = null
-                this.render('hidden')
-            }
-        }, this.successDurationMs)
-        this.successTimer = timer
+        try {
+            const timer = this.schedule.call(this.timerHost, () => {
+                if(this.successTimer === timer){
+                    this.successTimer = null
+                    this.render('hidden')
+                }
+            }, this.successDurationMs)
+            this.successTimer = timer
+        } catch(error) {
+            this.successTimer = null
+            this.render('hidden')
+            throw error
+        }
     }
 
     hide() {

@@ -2,7 +2,7 @@ appId: 'maplecraftlauncher'
 productName: 'MapleCraft Launcher'
 artifactName: '${productName}-setup-${version}.${ext}'
 
-copyright: 'Copyright © 2018-2026 Daniel Scalzi'
+copyright: 'Copyright © 2018-2026 Lingyu_ILY & DS'
 
 asar: true
 compression: 'maximum'

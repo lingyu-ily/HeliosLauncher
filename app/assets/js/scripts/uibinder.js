@@ -116,6 +116,13 @@ function syncLauncherShell(view){
             updateServerSidebarSelection(null)
         }
     }
+    if(typeof syncServerStatusView === 'function' && typeof stopServerStatusAutoRefresh === 'function'){
+        if(view === VIEWS.landing){
+            syncServerStatusView()
+        } else {
+            stopServerStatusAutoRefresh()
+        }
+    }
 }
 
 /**
@@ -344,7 +351,7 @@ function onDistroRefresh(data){
     renderServerSidebar(data)
     syncModConfigurations(data)
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
-    refreshServerStatus()
+    syncServerStatusView()
     ensureJavaSettings(data)
 }
 

@@ -268,6 +268,7 @@ empty = "目前沒有可用伺服器"
 server = "伺服器"
 offline = "離線"
 players = "玩家"
+checking = "查詢中…"
 
 [js.landing.systemScan]
 checking = "正在檢查系統資訊…"

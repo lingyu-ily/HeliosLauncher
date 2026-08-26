@@ -38,6 +38,7 @@ const {
 const DiscordWrapper          = require('./assets/js/discordwrapper')
 const { DiscordPresenceController } = require('./assets/js/discordpresence')
 const ProcessBuilder          = require('./assets/js/processbuilder')
+const { ServerStatusCache }   = require('./assets/js/serverstatuscache')
 
 // Launch Elements
 const launch_button           = document.getElementById('launch_button')
@@ -590,17 +591,18 @@ function renderServerSidebar(distro){
                     }
                     return true
                 }, async () => {
-                    if(serverChanged){
-                        await refreshServerStatus(true)
-                    } else {
+                    if(!serverChanged){
                         playHeroPresentationEnter()
                     }
+                    await refreshServerStatus(true)
                 }, requestSequence)
                 return
             }
             if(ConfigManager.getSelectedServer() === server.id){
                 if(getLandingSection() === 'home' || getLandingSection() === 'globalUpdates'){
-                    setLandingSection('play')
+                    if(setLandingSection('play')){
+                        await refreshServerStatus(true)
+                    }
                 }
                 item.focus()
                 return
@@ -1142,6 +1144,7 @@ function updateSelectedServer(serv){
         selectedServerIcon.alt = ''
         updateServerSidebarSelection(null)
     }
+    setActiveServerStatusServer(serv)
     setLaunchEnabled(serv != null)
     void applyServerPresentation(serv)
     void initGlobalNews()
@@ -1226,41 +1229,167 @@ const refreshMojangStatuses = async function(){
     document.getElementById('mojang_status_icon').style.color = MojangRestAPI.statusToHex(status)
 }
 
-const refreshServerStatus = async (fade = false) => {
-    loggerLanding.info('Refreshing Server Status')
-    const serv = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
+const SERVER_STATUS_COOLDOWN_MS = 10000
+const SERVER_STATUS_AUTO_REFRESH_MS = 5*60*1000
+const serverStatusCache = new ServerStatusCache(SERVER_STATUS_COOLDOWN_MS)
+let activeServerStatusKey = null
+let serverStatusRefreshSequence = 0
+let serverStatusRefreshTimer = null
 
-    let pLabel = Lang.queryJS('landing.serverStatus.server')
-    let pVal = Lang.queryJS('landing.serverStatus.offline')
+function getServerStatusKey(serv){
+    const serverId = serv?.rawServer?.id
+    const port = serv?.port == null || serv.port === '' ? 25565 : serv.port
+    return serverId == null ? null : `${serverId}\u0000${serv.hostname}\u0000${port}`
+}
 
-    if(serv == null){
-        document.getElementById('landingPlayerLabel').innerHTML = pLabel
-        document.getElementById('player_count').innerHTML = pVal
+function stopServerStatusAutoRefresh(){
+    if(serverStatusRefreshTimer != null){
+        clearTimeout(serverStatusRefreshTimer)
+        serverStatusRefreshTimer = null
+    }
+}
+
+function setActiveServerStatusServer(serv){
+    const nextKey = getServerStatusKey(serv)
+    if(activeServerStatusKey !== nextKey){
+        activeServerStatusKey = nextKey
+        ++serverStatusRefreshSequence
+        stopServerStatusAutoRefresh()
+    }
+}
+
+function isServerStatusViewActive(key = activeServerStatusKey){
+    return key != null
+        && key === activeServerStatusKey
+        && getCurrentView() === VIEWS.landing
+        && getLandingSection() === 'play'
+        && !document.hidden
+        && document.hasFocus()
+}
+
+function renderServerStatus(status, fade = false){
+    const playerLabel = document.getElementById('landingPlayerLabel')
+    const playerCount = document.getElementById('player_count')
+    let label
+    let value
+
+    if(status.state === 'loading'){
+        label = Lang.queryJS('landing.serverStatus.players')
+        value = Lang.queryJS('landing.serverStatus.checking')
+    } else if(status.state === 'online'){
+        label = Lang.queryJS('landing.serverStatus.players')
+        value = `${status.online}/${status.max}`
+    } else {
+        label = Lang.queryJS('landing.serverStatus.server')
+        value = Lang.queryJS('landing.serverStatus.offline')
+    }
+
+    const applyStatus = () => {
+        playerLabel.textContent = label
+        playerCount.textContent = value
+    }
+    const wrapper = $('#server_status_wrapper')
+    wrapper.stop(true, true)
+    if(fade && (playerLabel.textContent !== label || playerCount.textContent !== value)){
+        wrapper.fadeOut(250, () => {
+            applyStatus()
+            wrapper.fadeIn(500)
+        })
+    } else {
+        applyStatus()
+        wrapper.show()
+    }
+}
+
+function scheduleServerStatusAutoRefresh(key = activeServerStatusKey){
+    stopServerStatusAutoRefresh()
+    if(!isServerStatusViewActive(key)){
         return
     }
 
+    const cached = serverStatusCache.get(key)
+    const elapsed = cached == null ? 0 : Date.now() - cached.updatedAt
+    const delay = Math.max(0, SERVER_STATUS_AUTO_REFRESH_MS - elapsed)
+    serverStatusRefreshTimer = setTimeout(() => {
+        serverStatusRefreshTimer = null
+        if(isServerStatusViewActive(key)){
+            void refreshServerStatus(true)
+        }
+    }, delay)
+}
+
+function syncServerStatusView(){
+    if(!isServerStatusViewActive()){
+        stopServerStatusAutoRefresh()
+        return
+    }
+    const cached = serverStatusCache.get(activeServerStatusKey)
+    if(cached != null){
+        renderServerStatus(cached.value)
+    }
+    scheduleServerStatusAutoRefresh()
+}
+
+const refreshServerStatus = async (fade = false) => {
+    loggerLanding.info('Refreshing Server Status')
+    let refreshSequence = ++serverStatusRefreshSequence
+    const serverId = ConfigManager.getSelectedServer()
+    let serv
+
     try {
-
-        const servStat = await getServerStatus(47, serv.hostname, serv.port)
-        console.log(servStat)
-        pLabel = Lang.queryJS('landing.serverStatus.players')
-        pVal = servStat.players.online + '/' + servStat.players.max
-
-    } catch (err) {
-        loggerLanding.warn('Unable to refresh server status, assuming offline.')
+        serv = (await DistroAPI.getDistribution()).getServerById(serverId)
+    } catch(err) {
+        loggerLanding.warn('Unable to resolve the selected server status context.')
         loggerLanding.debug(err)
+        return
     }
-    if(fade){
-        $('#server_status_wrapper').fadeOut(250, () => {
-            document.getElementById('landingPlayerLabel').innerHTML = pLabel
-            document.getElementById('player_count').innerHTML = pVal
-            $('#server_status_wrapper').fadeIn(500)
-        })
-    } else {
-        document.getElementById('landingPlayerLabel').innerHTML = pLabel
-        document.getElementById('player_count').innerHTML = pVal
+
+    if(serverId !== ConfigManager.getSelectedServer()){
+        return
     }
-    
+    if(serv == null){
+        setActiveServerStatusServer(null)
+        renderServerStatus({ state: 'offline' })
+        return
+    }
+
+    const key = getServerStatusKey(serv)
+    if(key !== activeServerStatusKey){
+        if(refreshSequence !== serverStatusRefreshSequence){
+            return
+        }
+        setActiveServerStatusServer(serv)
+        refreshSequence = serverStatusRefreshSequence
+    }
+    const cached = serverStatusCache.get(key)
+    if(isServerStatusViewActive(key)){
+        renderServerStatus(cached?.value ?? { state: 'loading' })
+    }
+    if(cached?.fresh){
+        scheduleServerStatusAutoRefresh(key)
+        return cached.value
+    }
+
+    const status = await serverStatusCache.refresh(key, async () => {
+        try {
+            const servStat = await getServerStatus(47, serv.hostname, serv.port)
+            return {
+                state: 'online',
+                online: servStat.players.online,
+                max: servStat.players.max
+            }
+        } catch(err) {
+            loggerLanding.warn('Unable to refresh server status, assuming offline.')
+            loggerLanding.debug(err)
+            return { state: 'offline' }
+        }
+    })
+
+    if(refreshSequence === serverStatusRefreshSequence && isServerStatusViewActive(key)){
+        renderServerStatus(status, fade)
+        scheduleServerStatusAutoRefresh(key)
+    }
+    return status
 }
 
 refreshMojangStatuses()
@@ -1268,8 +1397,6 @@ refreshMojangStatuses()
 
 // Refresh statuses every hour. The status page itself refreshes every day so...
 let mojangStatusListener = setInterval(() => refreshMojangStatuses(true), 60*60*1000)
-// Set refresh rate to once every 5 minutes.
-let serverStatusListener = setInterval(() => refreshServerStatus(true), 300000)
 
 /**
  * Shows an error overlay, toggles off the launch area.
@@ -1749,6 +1876,11 @@ function setLandingSection(section, animateHero = true){
     if(section === 'play' && previousSection !== 'play' && animateHero){
         playHeroPresentationEnter()
     }
+    if(section === 'play'){
+        syncServerStatusView()
+    } else {
+        stopServerStatusAutoRefresh()
+    }
 
     if(section === 'mods'){
         void prepareLandingModsView()
@@ -1814,6 +1946,9 @@ setLandingSection('play')
 document.addEventListener('visibilitychange', syncHeroMediaPlayback)
 window.addEventListener('focus', syncHeroMediaPlayback)
 window.addEventListener('blur', syncHeroMediaPlayback)
+document.addEventListener('visibilitychange', syncServerStatusView)
+window.addEventListener('focus', syncServerStatusView)
+window.addEventListener('blur', stopServerStatusAutoRefresh)
 window.addEventListener('message', event => {
     if(event.origin !== 'https://www.youtube.com' || activeHeroMedia?.descriptor.type !== 'youtube'){
         return

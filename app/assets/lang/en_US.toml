@@ -269,6 +269,7 @@ empty = "No servers available"
 server = "SERVER"
 offline = "OFFLINE"
 players = "PLAYERS"
+checking = "CHECKING…"
 
 [js.landing.systemScan]
 checking = "Checking system info.."

@@ -45,12 +45,8 @@ function showLandingJavaError(title, message, focusTarget = null){
 function renderLandingJavaServer(server){
     const rawServer = server.rawServer
     const icon = document.getElementById('landingJavaServerIcon')
-    icon.src = rawServer.icon
     icon.alt = rawServer.name
-    icon.onerror = () => {
-        icon.onerror = null
-        icon.src = 'assets/images/SealCircle.png'
-    }
+    bindCachedServerImage(icon, rawServer, 'icon', rawServer.icon)
     document.getElementById('landingJavaServerName').textContent = rawServer.name
     document.getElementById('landingJavaServerVersion').textContent = `${rawServer.minecraftVersion} · ${rawServer.version}`
 }

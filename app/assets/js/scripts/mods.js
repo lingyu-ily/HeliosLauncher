@@ -41,8 +41,8 @@ function showLandingModsError(title, message){
 function renderLandingModsServer(server){
     const rawServer = server.rawServer
     const icon = document.getElementById('landingModsServerIcon')
-    icon.src = rawServer.icon
     icon.alt = rawServer.name
+    bindCachedServerImage(icon, rawServer, 'icon', rawServer.icon)
     document.getElementById('landingModsServerName').textContent = rawServer.name
     document.getElementById('landingModsServerVersion').textContent = `${rawServer.minecraftVersion} · ${rawServer.version}`
 }

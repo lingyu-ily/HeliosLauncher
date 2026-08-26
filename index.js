@@ -13,18 +13,31 @@ const { Readable }                      = require('stream')
 const { pathToFileURL }                 = require('url')
 const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, SHELL_OPCODE } = require('./app/assets/js/ipcconstants')
 const LangLoader                        = require('./app/assets/js/langloader')
+const { resolveServerImageCacheRequest } = require('./app/assets/js/serverimageprotocol')
 
 const HERO_VIDEO_SCHEME = 'maplecraft-video'
+const SERVER_IMAGE_SCHEME = 'maplecraft-image'
 
-protocol.registerSchemesAsPrivileged([{
-    scheme: HERO_VIDEO_SCHEME,
-    privileges: {
-        secure: true,
-        standard: true,
-        stream: true,
-        supportFetchAPI: true
+protocol.registerSchemesAsPrivileged([
+    {
+        scheme: HERO_VIDEO_SCHEME,
+        privileges: {
+            secure: true,
+            standard: true,
+            stream: true,
+            supportFetchAPI: true
+        }
+    },
+    {
+        scheme: SERVER_IMAGE_SCHEME,
+        privileges: {
+            secure: true,
+            standard: true,
+            stream: true,
+            supportFetchAPI: true
+        }
     }
-}])
+])
 
 // Setup Lang
 LangLoader.setupLanguage()
@@ -443,7 +456,53 @@ function configureHeroVideoProtocol(){
     })
 }
 
+function configureServerImageProtocol(){
+    const cacheRoot = path.resolve(app.getPath('userData'), 'server-image-cache')
+
+    protocol.handle(SERVER_IMAGE_SCHEME, async request => {
+        if(request.method !== 'GET' && request.method !== 'HEAD'){
+            return new Response(null, {
+                status: 405,
+                headers: { Allow: 'GET, HEAD' }
+            })
+        }
+
+        const resolved = resolveServerImageCacheRequest(cacheRoot, request.url)
+        if(resolved == null){
+            return new Response(null, { status: 404 })
+        }
+
+        let fileStat
+        try {
+            fileStat = await fs.promises.stat(resolved.filePath)
+        } catch(error) {
+            if(error.code === 'ENOENT'){
+                return new Response(null, { status: 404 })
+            }
+            throw error
+        }
+        if(!fileStat.isFile()){
+            return new Response(null, { status: 404 })
+        }
+
+        const headers = new Headers({
+            'Cache-Control': 'no-store',
+            'Content-Length': `${fileStat.size}`,
+            'Content-Type': resolved.contentType,
+            'X-Content-Type-Options': 'nosniff'
+        })
+        if(request.method === 'HEAD'){
+            return new Response(null, { status: 200, headers })
+        }
+        return new Response(Readable.toWeb(fs.createReadStream(resolved.filePath)), {
+            status: 200,
+            headers
+        })
+    })
+}
+
 app.on('ready', configureHeroVideoProtocol)
+app.on('ready', configureServerImageProtocol)
 app.on('ready', configureYouTubeEmbedIdentity)
 app.on('ready', createWindow)
 app.on('ready', createMenu)

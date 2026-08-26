@@ -38,6 +38,7 @@ const {
 const DiscordWrapper          = require('./assets/js/discordwrapper')
 const { DiscordPresenceController } = require('./assets/js/discordpresence')
 const ProcessBuilder          = require('./assets/js/processbuilder')
+const { ServerImageCache, normalizeRemoteImageSource } = require('./assets/js/serverimagecache')
 const { ServerStatusCache }   = require('./assets/js/serverstatuscache')
 
 // Launch Elements
@@ -84,6 +85,10 @@ const defaultServerPresentation = {
     eyebrow: launcherGameEyebrow.textContent,
     newsTitle: newsPreviewTitle.textContent
 }
+const defaultServerIcon = 'assets/images/SealCircle.png'
+const serverImageCache = new ServerImageCache(nodePath.join(ConfigManager.getLauncherDirectory(), 'server-image-cache'))
+const serverImageBindings = new WeakMap()
+const reportedServerImageFailures = new WeakSet()
 let heroPresentationSequence = 0
 let heroPresentationServerId = null
 let activeHeroMedia = null
@@ -561,8 +566,8 @@ function renderServerSidebar(distro){
 
         const icon = document.createElement('img')
         icon.className = 'serverSidebarIcon'
-        icon.src = server.icon
         icon.alt = ''
+        bindCachedServerImage(icon, server, 'icon', server.icon, defaultServerIcon)
 
         const copy = document.createElement('span')
         copy.className = 'serverSidebarCopy'
@@ -637,8 +642,86 @@ serverSidebarList.addEventListener('keydown', (e) => {
     items[nextIndex].focus()
 })
 
+function isInvalidRemoteImageSource(source){
+    return typeof source === 'string' && /^https?:/i.test(source.trim()) && normalizeRemoteImageSource(source) == null
+}
+
+function createServerImageDescriptor(rawServer, type, source){
+    const normalizedSource = normalizeRemoteImageSource(source)
+    if(normalizedSource == null || rawServer?.id == null){
+        return null
+    }
+    return {
+        serverId: rawServer.id,
+        serverVersion: rawServer.version,
+        type,
+        source: normalizedSource
+    }
+}
+
+function reportServerImageFailure(refresh, descriptor, err){
+    if(reportedServerImageFailures.has(refresh)){
+        return
+    }
+    reportedServerImageFailures.add(refresh)
+    loggerLanding.warn(`Unable to cache the ${descriptor.type} image for ${descriptor.serverId}.`, err)
+}
+
+function applyServerImageElementSource(element, url, fallback, descriptor, binding){
+    if(serverImageBindings.get(element) !== binding){
+        return
+    }
+    element.onerror = () => {
+        if(serverImageBindings.get(element) !== binding){
+            return
+        }
+        element.onerror = null
+        element.src = fallback
+        if(descriptor != null && url.startsWith('maplecraft-image://')){
+            void serverImageCache.invalidate(descriptor).catch(err => {
+                loggerLanding.warn(`Unable to invalidate the ${descriptor.type} image for ${descriptor.serverId}.`, err)
+            })
+        }
+    }
+    element.src = url
+}
+
+function bindCachedServerImage(element, rawServer, type, source, fallback = defaultServerIcon){
+    const binding = Symbol('server-image-binding')
+    serverImageBindings.set(element, binding)
+    const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
+    const descriptor = createServerImageDescriptor(rawServer, type, candidate)
+
+    if(descriptor == null){
+        applyServerImageElementSource(
+            element,
+            isInvalidRemoteImageSource(candidate) ? fallback : candidate,
+            fallback,
+            null,
+            binding
+        )
+        return
+    }
+
+    applyServerImageElementSource(element, fallback, fallback, null, binding)
+    void serverImageCache.resolve(descriptor).then(resolution => {
+        if(resolution.currentUrl != null){
+            applyServerImageElementSource(element, resolution.currentUrl, fallback, descriptor, binding)
+        }
+        if(resolution.refresh != null){
+            void resolution.refresh.then(url => {
+                if(url != null){
+                    applyServerImageElementSource(element, url, fallback, descriptor, binding)
+                }
+            }).catch(err => reportServerImageFailure(resolution.refresh, descriptor, err))
+        }
+    }).catch(err => {
+        loggerLanding.warn(`Unable to resolve the ${descriptor.type} image for ${descriptor.serverId}.`, err)
+    })
+}
+
 // Bind selected server
-function preloadHeroAsset(source, fallback){
+function preloadImageUrl(source, fallback){
     const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
     return new Promise(resolve => {
         const image = new Image()
@@ -665,6 +748,54 @@ function preloadHeroAsset(source, fallback){
         }
         image.src = candidate
     })
+}
+
+async function resolveHeroImage(rawServer, type, source, fallback){
+    const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
+    const descriptor = createServerImageDescriptor(rawServer, type, candidate)
+    if(descriptor == null){
+        return {
+            currentUrl: await preloadImageUrl(isInvalidRemoteImageSource(candidate) ? fallback : candidate, fallback),
+            refresh: null
+        }
+    }
+
+    let resolution
+    try {
+        resolution = await serverImageCache.resolve(descriptor)
+    } catch(err) {
+        loggerLanding.warn(`Unable to resolve the ${descriptor.type} image for ${descriptor.serverId}.`, err)
+        return { currentUrl: fallback, refresh: null }
+    }
+
+    const requestedCurrentUrl = resolution.currentUrl ?? fallback
+    const currentUrl = await preloadImageUrl(requestedCurrentUrl, fallback)
+    if(resolution.currentUrl != null && currentUrl !== resolution.currentUrl){
+        await serverImageCache.invalidate(descriptor).catch(err => {
+            loggerLanding.warn(`Unable to invalidate the ${descriptor.type} image for ${descriptor.serverId}.`, err)
+        })
+    }
+
+    const refresh = resolution.refresh == null
+        ? null
+        : resolution.refresh.then(async url => {
+            if(url == null){
+                return null
+            }
+            const loadedUrl = await preloadImageUrl(url, fallback)
+            if(loadedUrl !== url){
+                await serverImageCache.invalidate(descriptor).catch(err => {
+                    loggerLanding.warn(`Unable to invalidate the ${descriptor.type} image for ${descriptor.serverId}.`, err)
+                })
+                return null
+            }
+            return loadedUrl
+        }).catch(err => {
+            reportServerImageFailure(resolution.refresh, descriptor, err)
+            return null
+        })
+
+    return { currentUrl, refresh }
 }
 
 function normalizeHeroVideoDescriptor(value){
@@ -1086,8 +1217,8 @@ async function applyServerPresentation(serv){
     configureHeroMedia(serverId, video, requestSequence)
 
     const [background, logo] = await Promise.all([
-        preloadHeroAsset(presentation.background, defaultServerPresentation.background),
-        preloadHeroAsset(presentation.logo, defaultServerPresentation.logo)
+        resolveHeroImage(rawServer, 'background', presentation.background, defaultServerPresentation.background),
+        resolveHeroImage(rawServer, 'logo', presentation.logo, defaultServerPresentation.logo)
     ])
     if(requestSequence !== heroPresentationSequence){
         return
@@ -1097,8 +1228,8 @@ async function applyServerPresentation(serv){
         if(requestSequence !== heroPresentationSequence){
             return
         }
-        launcherHero.style.backgroundImage = `url(${JSON.stringify(background)})`
-        launcherHeroLogo.src = logo
+        launcherHero.style.backgroundImage = `url(${JSON.stringify(background.currentUrl)})`
+        launcherHeroLogo.src = logo.currentUrl
         launcherHeroLogo.alt = presentation.title || rawServer?.name || 'MapleCraft'
         launcherHeroWordmark.textContent = presentation.title
         launcherHeroWordmark.toggleAttribute('hidden', presentation.title.length === 0)
@@ -1115,6 +1246,23 @@ async function applyServerPresentation(serv){
             }
         }, 200)
     })
+
+    if(background.refresh != null){
+        void background.refresh.then(url => {
+            if(url != null && requestSequence === heroPresentationSequence){
+                background.currentUrl = url
+                launcherHero.style.backgroundImage = `url(${JSON.stringify(url)})`
+            }
+        })
+    }
+    if(logo.refresh != null){
+        void logo.refresh.then(url => {
+            if(url != null && requestSequence === heroPresentationSequence){
+                logo.currentUrl = url
+                launcherHeroLogo.src = url
+            }
+        })
+    }
 }
 
 function updateSelectedServer(serv){
@@ -1134,14 +1282,14 @@ function updateSelectedServer(serv){
     if(serv != null){
         selectedServerName.textContent = serv.rawServer.name
         selectedServerVersion.textContent = `${serv.rawServer.minecraftVersion} · ${serv.rawServer.version}`
-        selectedServerIcon.src = serv.rawServer.icon
         selectedServerIcon.alt = serv.rawServer.name
+        bindCachedServerImage(selectedServerIcon, serv.rawServer, 'icon', serv.rawServer.icon, defaultServerIcon)
         updateServerSidebarSelection(serverLandingSections.has(getLandingSection()) ? serv.rawServer.id : null)
     } else {
         selectedServerName.textContent = Lang.queryJS('landing.selectedServer.noSelection')
         selectedServerVersion.textContent = ''
-        selectedServerIcon.src = 'assets/images/SealCircle.png'
         selectedServerIcon.alt = ''
+        bindCachedServerImage(selectedServerIcon, null, 'icon', defaultServerIcon, defaultServerIcon)
         updateServerSidebarSelection(null)
     }
     setActiveServerStatusServer(serv)

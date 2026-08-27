@@ -449,7 +449,7 @@ retryButton = "Retry"
 exitButton = "Exit Launcher"
 
 [js.uibinder.distributionNotice]
-offlineMessage = "Unable to retrieve the latest distribution data. The Launcher is using its local cache."
+offlineMessage = "Unable to retrieve the latest distribution data."
 retryButton = "Retry"
 retryingButton = "Retrying…"
 successMessage = "The latest distribution data was retrieved successfully."

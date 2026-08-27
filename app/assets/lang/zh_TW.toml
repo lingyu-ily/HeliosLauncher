@@ -448,7 +448,7 @@ retryButton = "重試"
 exitButton = "結束 Launcher"
 
 [js.uibinder.distributionNotice]
-offlineMessage = "目前無法取得最新發行資料，Launcher 正使用本機快取。"
+offlineMessage = "目前無法取得最新發行資料，目前遊戲版本可能落後。"
 retryButton = "重試"
 retryingButton = "正在重試…"
 successMessage = "已成功取得最新發行資料。"

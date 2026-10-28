@@ -3778,7 +3778,7 @@ button:disabled {
     min-width: 38px;
     border: 1px solid #6b655f;
     border-radius: 2px;
-    background: #171615 url('../images/SealCircle.png') center / cover no-repeat;
+    background: #171615 none center / cover no-repeat;
     box-shadow: none;
 }
 
@@ -4155,6 +4155,7 @@ button:disabled {
     flex: none;
     object-fit: cover;
     image-rendering: auto;
+    transition-property: none;
 }
 
 .serverSidebarCopy {
@@ -4918,6 +4919,10 @@ button:disabled {
     transform-origin: top center;
 }
 
+#image_seal_container[hidden] {
+    display: none;
+}
+
 #image_seal_container[hero-entering] {
     animation: launcherHeroEnter 640ms cubic-bezier(0.22, 0.75, 0.3, 1) both;
 }
@@ -5186,6 +5191,7 @@ button:disabled {
     height: 38px;
     flex: none;
     object-fit: cover;
+    transition-property: none;
 }
 
 #selectedServerCopy {

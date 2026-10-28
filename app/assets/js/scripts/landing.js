@@ -81,16 +81,13 @@ const newsPreviewTitle        = document.getElementById('newsPreviewTitle')
 
 const defaultServerPresentation = {
     background: launcherHero.dataset.defaultBackground,
-    logo: launcherHeroLogo.getAttribute('src'),
     eyebrow: launcherGameEyebrow.textContent,
     newsTitle: newsPreviewTitle.textContent
 }
-const defaultServerIcon = 'assets/images/SealCircle.png'
 const serverImageCache = new ServerImageCache(nodePath.join(ConfigManager.getLauncherDirectory(), 'server-image-cache'))
 const serverImageBindings = new WeakMap()
 const reportedServerImageFailures = new WeakSet()
 let heroPresentationSequence = 0
-let heroPresentationServerId = null
 let activeHeroMedia = null
 let activeHeroMediaReady = false
 let activeHeroMediaDownload = null
@@ -491,8 +488,9 @@ function updateSelectedAccount(authUser){
             username = authUser.displayName
         }
         accountType = getAccountTypeLabel(authUser)
-        if(authUser.uuid != null){
-            const avatarURL = `https://mc-heads.net/head/${encodeURIComponent(authUser.uuid)}/64`
+        const avatarUuid = normalizeHeroCopy(authUser.uuid)
+        if(avatarUuid.length > 0){
+            const avatarURL = `https://mc-heads.net/head/${encodeURIComponent(avatarUuid)}/64`
             const avatarImage = new Image()
             avatarImage.onload = () => {
                 if(avatarRequestSequence === accountAvatarRequestSequence){
@@ -567,7 +565,7 @@ function renderServerSidebar(distro){
         const icon = document.createElement('img')
         icon.className = 'serverSidebarIcon'
         icon.alt = ''
-        bindCachedServerImage(icon, server, 'icon', server.icon, defaultServerIcon)
+        bindCachedServerImage(icon, server, 'icon', server.icon)
 
         const copy = document.createElement('span')
         copy.className = 'serverSidebarCopy'
@@ -667,16 +665,34 @@ function reportServerImageFailure(refresh, descriptor, err){
     loggerLanding.warn(`Unable to cache the ${descriptor.type} image for ${descriptor.serverId}.`, err)
 }
 
-function applyServerImageElementSource(element, url, fallback, descriptor, binding){
+function applyServerImageElementSource(element, url, descriptor, binding, onVisibilityChange = null){
     if(serverImageBindings.get(element) !== binding){
         return
+    }
+    element.onload = null
+    element.onerror = null
+    element.style.visibility = 'hidden'
+    onVisibilityChange?.(false)
+    if(!url){
+        element.removeAttribute('src')
+        return
+    }
+    element.onload = () => {
+        if(serverImageBindings.get(element) !== binding){
+            return
+        }
+        element.style.visibility = ''
+        onVisibilityChange?.(true)
     }
     element.onerror = () => {
         if(serverImageBindings.get(element) !== binding){
             return
         }
+        element.onload = null
         element.onerror = null
-        element.src = fallback
+        element.style.visibility = 'hidden'
+        element.removeAttribute('src')
+        onVisibilityChange?.(false)
         if(descriptor != null && url.startsWith('maplecraft-image://')){
             void serverImageCache.invalidate(descriptor).catch(err => {
                 loggerLanding.warn(`Unable to invalidate the ${descriptor.type} image for ${descriptor.serverId}.`, err)
@@ -686,32 +702,34 @@ function applyServerImageElementSource(element, url, fallback, descriptor, bindi
     element.src = url
 }
 
-function bindCachedServerImage(element, rawServer, type, source, fallback = defaultServerIcon){
+function bindCachedServerImage(element, rawServer, type, source){
     const binding = Symbol('server-image-binding')
     serverImageBindings.set(element, binding)
-    const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
+    applyServerImageElementSource(element, null, null, binding)
+    const candidate = normalizeHeroCopy(source)
+    if(candidate.length === 0){
+        return
+    }
     const descriptor = createServerImageDescriptor(rawServer, type, candidate)
 
     if(descriptor == null){
         applyServerImageElementSource(
             element,
-            isInvalidRemoteImageSource(candidate) ? fallback : candidate,
-            fallback,
+            isInvalidRemoteImageSource(candidate) ? null : candidate,
             null,
             binding
         )
         return
     }
 
-    applyServerImageElementSource(element, fallback, fallback, null, binding)
     void serverImageCache.resolve(descriptor).then(resolution => {
         if(resolution.currentUrl != null){
-            applyServerImageElementSource(element, resolution.currentUrl, fallback, descriptor, binding)
+            applyServerImageElementSource(element, resolution.currentUrl, descriptor, binding)
         }
         if(resolution.refresh != null){
             void resolution.refresh.then(url => {
                 if(url != null){
-                    applyServerImageElementSource(element, url, fallback, descriptor, binding)
+                    applyServerImageElementSource(element, url, descriptor, binding)
                 }
             }).catch(err => reportServerImageFailure(resolution.refresh, descriptor, err))
         }
@@ -721,8 +739,11 @@ function bindCachedServerImage(element, rawServer, type, source, fallback = defa
 }
 
 // Bind selected server
-function preloadImageUrl(source, fallback){
+function preloadImageUrl(source, fallback = null){
     const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
+    if(!candidate){
+        return Promise.resolve(fallback)
+    }
     return new Promise(resolve => {
         const image = new Image()
         let settled = false
@@ -737,7 +758,7 @@ function preloadImageUrl(source, fallback){
         const timeout = setTimeout(() => finish(fallback), 5000)
         image.onload = () => finish(candidate)
         image.onerror = () => {
-            if(candidate === fallback){
+            if(!fallback || candidate === fallback){
                 finish(fallback)
                 return
             }
@@ -750,7 +771,7 @@ function preloadImageUrl(source, fallback){
     })
 }
 
-async function resolveHeroImage(rawServer, type, source, fallback){
+async function resolveHeroImage(rawServer, type, source, fallback = null){
     const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
     const descriptor = createServerImageDescriptor(rawServer, type, candidate)
     if(descriptor == null){
@@ -1196,9 +1217,17 @@ launcherHeroVolumeSlider.onchange = () => {
 
 async function applyServerPresentation(serv){
     const requestSequence = ++heroPresentationSequence
+    const logoBinding = Symbol('hero-logo-binding')
+    serverImageBindings.set(launcherHeroLogo, logoBinding)
+    const setLogoVisibility = visible => {
+        launcherHeroContent.hidden = !visible
+        if(visible){
+            playHeroPresentationEnter()
+        }
+    }
+    applyServerImageElementSource(launcherHeroLogo, null, null, logoBinding, setLogoVisibility)
     const rawServer = serv?.rawServer
     const serverId = rawServer?.id || null
-    const serverChanged = heroPresentationServerId !== serverId
     const hero = rawServer?.ui?.hero || {}
     const video = normalizeHeroVideoDescriptor(hero.video)
     const eyebrow = typeof hero.eyebrow === 'string' && hero.eyebrow.trim()
@@ -1206,11 +1235,12 @@ async function applyServerPresentation(serv){
         : defaultServerPresentation.eyebrow
     const presentation = {
         background: hero.background || defaultServerPresentation.background,
-        logo: hero.logo || defaultServerPresentation.logo,
+        logo: normalizeHeroCopy(hero.logo),
         eyebrow,
         title: normalizeHeroCopy(hero.title),
         tagline: normalizeHeroCopy(hero.tagline)
     }
+    const logoDescriptor = createServerImageDescriptor(rawServer, 'logo', presentation.logo)
 
     launcherGameEyebrow.textContent = presentation.eyebrow
     launcherGameEyebrow.title = presentation.eyebrow
@@ -1218,7 +1248,7 @@ async function applyServerPresentation(serv){
 
     const [background, logo] = await Promise.all([
         resolveHeroImage(rawServer, 'background', presentation.background, defaultServerPresentation.background),
-        resolveHeroImage(rawServer, 'logo', presentation.logo, defaultServerPresentation.logo)
+        resolveHeroImage(rawServer, 'logo', presentation.logo)
     ])
     if(requestSequence !== heroPresentationSequence){
         return
@@ -1229,16 +1259,19 @@ async function applyServerPresentation(serv){
             return
         }
         launcherHero.style.backgroundImage = `url(${JSON.stringify(background.currentUrl)})`
-        launcherHeroLogo.src = logo.currentUrl
         launcherHeroLogo.alt = presentation.title || rawServer?.name || 'MapleCraft'
         launcherHeroWordmark.textContent = presentation.title
         launcherHeroWordmark.toggleAttribute('hidden', presentation.title.length === 0)
         launcherHeroTagline.textContent = presentation.tagline
         launcherHeroTagline.toggleAttribute('hidden', presentation.tagline.length === 0)
         newsPreviewTitle.textContent = presentation.title || defaultServerPresentation.newsTitle
-        heroPresentationServerId = serverId
-        if(serverChanged){
-            playHeroPresentationEnter()
+        applyServerImageElementSource(launcherHeroLogo, logo.currentUrl, logoDescriptor, logoBinding, setLogoVisibility)
+        if(logo.refresh != null){
+            void logo.refresh.then(url => {
+                if(url != null && requestSequence === heroPresentationSequence){
+                    applyServerImageElementSource(launcherHeroLogo, url, logoDescriptor, logoBinding, setLogoVisibility)
+                }
+            })
         }
         setTimeout(() => {
             if(requestSequence === heroPresentationSequence){
@@ -1252,14 +1285,6 @@ async function applyServerPresentation(serv){
             if(url != null && requestSequence === heroPresentationSequence){
                 background.currentUrl = url
                 launcherHero.style.backgroundImage = `url(${JSON.stringify(url)})`
-            }
-        })
-    }
-    if(logo.refresh != null){
-        void logo.refresh.then(url => {
-            if(url != null && requestSequence === heroPresentationSequence){
-                logo.currentUrl = url
-                launcherHeroLogo.src = url
             }
         })
     }
@@ -1282,14 +1307,14 @@ function updateSelectedServer(serv){
     if(serv != null){
         selectedServerName.textContent = serv.rawServer.name
         selectedServerVersion.textContent = `${serv.rawServer.minecraftVersion} · ${serv.rawServer.version}`
-        selectedServerIcon.alt = serv.rawServer.name
-        bindCachedServerImage(selectedServerIcon, serv.rawServer, 'icon', serv.rawServer.icon, defaultServerIcon)
+        selectedServerIcon.alt = ''
+        bindCachedServerImage(selectedServerIcon, serv.rawServer, 'icon', serv.rawServer.icon)
         updateServerSidebarSelection(serverLandingSections.has(getLandingSection()) ? serv.rawServer.id : null)
     } else {
         selectedServerName.textContent = Lang.queryJS('landing.selectedServer.noSelection')
         selectedServerVersion.textContent = ''
         selectedServerIcon.alt = ''
-        bindCachedServerImage(selectedServerIcon, null, 'icon', defaultServerIcon, defaultServerIcon)
+        bindCachedServerImage(selectedServerIcon, null, 'icon', null)
         updateServerSidebarSelection(null)
     }
     setActiveServerStatusServer(serv)
@@ -2148,7 +2173,10 @@ function renderNewsCards(state, articles){
         return
     }
     if(articles.length === 0){
-        setNewsPreviewState(state, Lang.queryJS('landing.news.previewEmpty'))
+        const message = state.scope === 'server'
+            ? Lang.query('ejs.landing.serverUpdatesEmpty')
+            : Lang.queryJS('landing.news.previewEmpty')
+        setNewsPreviewState(state, message)
         return
     }
 
@@ -2262,10 +2290,10 @@ async function resolveNewsContext(scope){
     }
     const selectedServerId = ConfigManager.getSelectedServer()
     const server = selectedServerId == null ? null : distroData.getServerById(selectedServerId)
-    const source = server?.rawServer?.ui?.news?.rss || distroData.rawDistribution.rss || ''
+    const source = server?.rawServer?.ui?.news?.rss
     return {
         serverId: selectedServerId || '__global__',
-        source
+        source: typeof source === 'string' ? source.trim() : ''
     }
 }
 
@@ -2300,6 +2328,14 @@ async function initNewsState(state, force = false){
     const requestSequence = ++state.requestSequence
     state.context = context
     state.contextKey = contextKey
+    if(state.scope === 'server' && !context.source){
+        state.articles = []
+        state.loadingPromise = null
+        state.initialized = true
+        renderNewsCards(state, [])
+        showNewsResult(state, 'empty')
+        return
+    }
     state.initialized = false
     showNewsResult(state, 'loading')
     setNewsPreviewState(state, Lang.queryJS('landing.news.checking'))

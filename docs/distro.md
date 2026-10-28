@@ -148,7 +148,7 @@ A brief description of the server. Displayed on the UI to provide users more inf
 
 ### `Server.icon: string/url`
 
-A URL to the server's icon. Will be displayed on the UI.
+A URL to the server's icon. Sidebar and selected-server icons keep their space blank while the icon is missing, blank, loading, or failed. Valid cached images are still used; no default image is shown.
 
 ### `Server.version: string/semver`
 
@@ -182,7 +182,7 @@ Whether or not the server can be autoconnected to. If false, the server will not
 
 ### `Server.ui: object`
 
-Optional per-server Launcher presentation. `ui.hero` may define `background`, `logo`, `eyebrow`, `title`, and `tagline`. Missing or blank `title` and `tagline` values are hidden in the hero; missing `background`, `logo`, and `eyebrow` values inherit the Launcher's global presentation. `ui.news.rss` overrides the distribution-level RSS feed for this server, while a missing value inherits the distribution-level feed.
+Optional per-server Launcher presentation. `ui.hero` may define `background`, `logo`, `eyebrow`, `title`, and `tagline`. Missing or blank `title` and `tagline` values are hidden in the hero; missing `background` and `eyebrow` values inherit the Launcher's global presentation. The entire hero logo area, including its title and tagline, stays hidden until a configured `logo` loads successfully. A missing, blank, or failed logo does not use a default image; valid cached images are still used. `ui.news.rss` is the only RSS source for this server's update notes and homepage preview. A missing, empty, or whitespace-only value shows a no-data message without requesting a feed or displaying cached articles; it does not inherit the distribution-level RSS feed. The distribution-level feed is still used for global Launcher news.
 
 ### `Server.javaOptions: JavaOptions`
 

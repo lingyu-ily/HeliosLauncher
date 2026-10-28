@@ -77,8 +77,8 @@
                     <video id="launcherHeroVideo" loop playsinline preload="metadata" aria-hidden="true"></video>
                     <div id="launcherHeroYouTube" aria-hidden="true"></div>
                     <div id="launcherHeroShade"></div>
-                    <div id="image_seal_container">
-                        <img id="image_seal" src="assets/images/Maple.png" alt="MapleCraft"/>
+                    <div id="image_seal_container" hidden>
+                        <img id="image_seal" alt=""/>
                         <div id="launcherHeroWordmark">MAPLECRAFT</div>
                         <div id="launcherHeroTagline"><%- lang('landing.heroTagline') %></div>
                     </div>
@@ -96,7 +96,7 @@
 
                 <section id="launcherActionBar">
                     <button id="server_selection_button" type="button" aria-label="<%- lang('landing.navServers') %>">
-                        <img id="selectedServerIcon" src="assets/images/SealCircle.png" alt=""/>
+                        <img id="selectedServerIcon" alt="" style="visibility: hidden;"/>
                         <span id="selectedServerCopy">
                             <span id="selectedServerLabel"><%- lang('landing.selectedServerLabel') %></span>
                             <span id="selectedServerName"><%- lang('landing.launchButtonPlaceholder') %></span>
@@ -241,7 +241,7 @@
                         <button id="newsErrorRetry" class="mcButtonSecondary" data-news-retry type="button"><%- lang('landing.newsErrorRetryButton') %></button>
                     </div>
                     <div id="newsErrorNone" data-news-empty style="display: none;">
-                        <span id="nENoneSpan" class="newsErrorContent"><%- lang('landing.newsErrorNoneSpan') %></span>
+                        <span id="nENoneSpan" class="newsErrorContent"><%- lang('landing.serverUpdatesEmpty') %></span>
                     </div>
                 </div>
             </section>

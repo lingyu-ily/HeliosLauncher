@@ -4,6 +4,7 @@ remoteMain.initialize()
 // Requirements
 const { app, BrowserWindow, ipcMain, Menu, protocol, session, shell } = require('electron')
 const autoUpdater                       = require('electron-updater').autoUpdater
+const { LauncherUpdateService }         = require('./app/assets/js/launcherupdateservice')
 const ejse                              = require('ejs-electron')
 const fs                                = require('fs')
 const isDev                             = require('./app/assets/js/isdev')
@@ -43,6 +44,7 @@ protocol.registerSchemesAsPrivileged([
 LangLoader.setupLanguage()
 
 // Setup auto updater.
+const launcherUpdateService = new LauncherUpdateService(autoUpdater)
 function initAutoUpdater(event, data) {
 
     if(data){
@@ -59,21 +61,11 @@ function initAutoUpdater(event, data) {
     if(process.platform === 'darwin'){
         autoUpdater.autoDownload = false
     }
-    autoUpdater.on('update-available', (info) => {
-        event.sender.send('autoUpdateNotification', 'update-available', info)
+    launcherUpdateService.initialize((type, info) => {
+        if(!event.sender.isDestroyed()) {
+            event.sender.send('autoUpdateNotification', type, info)
+        }
     })
-    autoUpdater.on('update-downloaded', (info) => {
-        event.sender.send('autoUpdateNotification', 'update-downloaded', info)
-    })
-    autoUpdater.on('update-not-available', (info) => {
-        event.sender.send('autoUpdateNotification', 'update-not-available', info)
-    })
-    autoUpdater.on('checking-for-update', () => {
-        event.sender.send('autoUpdateNotification', 'checking-for-update')
-    })
-    autoUpdater.on('error', (err) => {
-        event.sender.send('autoUpdateNotification', 'realerror', err)
-    }) 
 }
 
 // Open channel to listen for update actions.
@@ -85,10 +77,7 @@ ipcMain.on('autoUpdateAction', (event, arg, data) => {
             event.sender.send('autoUpdateNotification', 'ready')
             break
         case 'checkForUpdate':
-            autoUpdater.checkForUpdates()
-                .catch(err => {
-                    event.sender.send('autoUpdateNotification', 'realerror', err)
-                })
+            void launcherUpdateService.check()
             break
         case 'allowPrereleaseChange':
             if(!data){
@@ -103,7 +92,7 @@ ipcMain.on('autoUpdateAction', (event, arg, data) => {
             }
             break
         case 'installUpdateNow':
-            autoUpdater.quitAndInstall()
+            launcherUpdateService.install()
             break
         default:
             console.log('Unknown argument', arg)

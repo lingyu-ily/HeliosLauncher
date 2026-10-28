@@ -1,4 +1,16 @@
 <div id="overlayContainer" style="display: none;">
+    <div id="startupErrorContent" role="dialog" aria-modal="true" aria-labelledby="startupErrorTitle" aria-describedby="startupErrorDescription" style="display: none;">
+        <h2 id="startupErrorTitle"></h2>
+        <p id="startupErrorDescription"></p>
+        <div id="startupUpdateSection">
+            <p id="startupUpdateStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+            <button id="startupUpdateButton" class="mcButtonSecondary" type="button"></button>
+        </div>
+        <div id="startupErrorActions">
+            <button id="startupRetryButton" class="mcButtonSecondary overlayKeybindEnter" type="button"></button>
+            <button id="startupExitButton" class="mcButtonSecondary overlayKeybindEsc" type="button"></button>
+        </div>
+    </div>
     <div id="accountSelectContent" style="display: none;">
         <span id="accountSelectHeader"><%- lang('overlay.accountSelectHeader') %></span>
         <div id="accountSelectList">

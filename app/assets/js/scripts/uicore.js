@@ -35,62 +35,78 @@ remote.getCurrentWebContents().on('devtools-opened', () => {
 webFrame.setZoomLevel(0)
 webFrame.setVisualZoomLevelLimits(1, 1)
 
-// Initialize auto updates in production environments.
-let updateCheckListener
+const { LauncherUpdateController } = require('./assets/js/launcherupdatecontroller')
+const launcherUpdateController = new LauncherUpdateController({
+    enabled: !isDev,
+    platform: process.platform,
+    send: (action, data) => ipcRenderer.send('autoUpdateAction', action, data),
+    onChange: () => renderLauncherUpdateState()
+})
+
 if(!isDev){
-    ipcRenderer.on('autoUpdateNotification', (event, arg, info) => {
-        switch(arg){
-            case 'checking-for-update':
-                loggerAutoUpdater.info('Checking for update..')
-                settingsUpdateButtonStatus(Lang.queryJS('uicore.autoUpdate.checkingForUpdateButton'), true)
-                break
-            case 'update-available':
-                loggerAutoUpdater.info('New update available', info.version)
-
-                if(process.platform === 'darwin'){
-                    info.darwindownload = `https://github.com/lingyu-ily/MapleCraftLauncher/releases/download/v${info.version}/MapleCraft-Launcher-setup-${info.version}${process.arch === 'arm64' ? '-arm64' : '-x64'}.dmg`
-                }
-
-                showUpdateUI(info)
-                populateSettingsUpdateInformation(info)
-                break
-            case 'update-downloaded':
-                loggerAutoUpdater.info('Update ' + info.version + ' ready to be installed.')
-                settingsUpdateButtonStatus(Lang.queryJS('uicore.autoUpdate.installNowButton'), false, () => {
-                    if(!isDev){
-                        ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
-                    }
-                })
-                showUpdateUI(info)
-                break
-            case 'update-not-available':
-                loggerAutoUpdater.info('No new update found.')
-                hideUpdateUI()
-                settingsUpdateButtonStatus(Lang.queryJS('uicore.autoUpdate.checkForUpdatesButton'))
-                break
-            case 'ready':
-                updateCheckListener = setInterval(() => {
-                    ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
-                }, 1800000)
-                ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
-                break
-            case 'realerror':
-                if(info != null && info.code != null){
-                    if(info.code === 'ERR_UPDATER_INVALID_RELEASE_FEED'){
-                        loggerAutoUpdater.info('No suitable releases found.')
-                    } else if(info.code === 'ERR_XML_MISSED_ELEMENT'){
-                        loggerAutoUpdater.info('No releases found.')
-                    } else {
-                        loggerAutoUpdater.error('Error during update check..', info)
-                        loggerAutoUpdater.debug('Error Code:', info.code)
-                    }
-                }
-                break
-            default:
-                loggerAutoUpdater.info('Unknown argument', arg)
-                break
+    ipcRenderer.on('autoUpdateNotification', (_event, type, info) => {
+        loggerAutoUpdater.info(type, info?.version || '')
+        if(type === 'realerror'){
+            loggerAutoUpdater.error('Launcher update failed.', info)
         }
+        if(type === 'update-available' && process.platform === 'darwin'){
+            info.darwindownload = `https://github.com/lingyu-ily/MapleCraftLauncher/releases/download/v${info.version}/MapleCraft-Launcher-setup-${info.version}${process.arch === 'arm64' ? '-arm64' : '-x64'}.dmg`
+        }
+        launcherUpdateController.receive(type, info)
     })
+}
+window.addEventListener('beforeunload', () => launcherUpdateController.dispose())
+
+function getLauncherUpdatePresentation(){
+    const { status, info, error } = launcherUpdateController.state
+    const label = key => Lang.queryJS(`uicore.launcherUpdate.${key}`)
+    let button = label('checkButton')
+    let action = () => launcherUpdateController.check()
+    const disabled = ['disabled', 'checking', 'downloading', 'installing'].includes(status)
+    if(status === 'checking' || status === 'downloading' || status === 'installing'){
+        button = label(status)
+    } else if(status === 'downloaded'){
+        button = label('installButton')
+        action = () => launcherUpdateController.install()
+    } else if(status === 'available'){
+        button = label('downloadButton')
+        action = () => shell.openExternal(info.darwindownload)
+    } else if(status === 'error'){
+        button = label('retryButton')
+    }
+    let message = label(status)
+    if(info?.version != null){
+        message += ` (${info.version})`
+    }
+    if(error != null){
+        // The detailed error stays in logs. Display a bounded, plain-text reason.
+        const reason = String(error.code || error.message || label('unknownError')).split(/[\r\n]/)[0].slice(0, 180)
+        message += ` — ${reason}`
+    }
+    return { message, button, disabled, action }
+}
+
+function renderLauncherUpdateState(){
+    const state = launcherUpdateController.state
+    const presentation = getLauncherUpdatePresentation()
+    if(state.info != null){
+        showUpdateUI(state.info)
+    } else {
+        hideUpdateUI()
+    }
+    if(document.getElementById('settingsUpdateActionButton') != null){
+        populateSettingsUpdateInformation(state.info)
+        settingsUpdateButtonStatus(presentation.button, presentation.disabled, presentation.action)
+        document.getElementById('settingsUpdateTitle').textContent = presentation.message
+    }
+    const status = document.getElementById('startupUpdateStatus')
+    const button = document.getElementById('startupUpdateButton')
+    if(status != null && button != null){
+        status.textContent = presentation.message
+        button.textContent = presentation.button
+        button.disabled = presentation.disabled
+        button.onclick = presentation.action
+    }
 }
 
 /**

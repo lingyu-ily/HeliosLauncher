@@ -31,6 +31,10 @@ function overlayKeyHandler (e){
  * @param {KeyboardEvent} e The keydown event.
  */
 function overlayKeyDismissableHandler (e){
+    // Let focused startup actions (including Update) handle Enter themselves.
+    if(overlayHandlerContent === 'startupErrorContent' && e.key === 'Enter' && e.target?.tagName === 'BUTTON'){
+        return
+    }
     if(e.key === 'Enter'){
         document.getElementById(overlayHandlerContent).getElementsByClassName('overlayKeybindEnter')[0].click()
     } else if(e.key === 'Escape'){

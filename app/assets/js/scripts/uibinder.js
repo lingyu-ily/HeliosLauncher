@@ -301,11 +301,6 @@ function bindDistributionNotice(){
 
 async function showMainUI(data){
 
-    if(!isDev){
-        loggerAutoUpdater.info('Initializing..')
-        ipcRenderer.send('autoUpdateAction', 'initAutoUpdater', ConfigManager.getAllowPrerelease())
-    }
-
     await prepareSettings(true)
     renderServerSidebar(data)
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
@@ -359,23 +354,24 @@ function showFatalStartupError(){
         $('#loadingContainer').fadeOut(250, () => {
             $('#loadSpinnerImage').removeClass('rotating')
             document.getElementById('overlayContainer').style.background = 'none'
-            setOverlayContent(
-                Lang.queryJS('uibinder.startup.fatalErrorTitle'),
-                Lang.queryJS('uibinder.startup.fatalErrorMessage'),
-                Lang.queryJS('uibinder.startup.retryButton'),
-                Lang.queryJS('uibinder.startup.exitButton')
-            )
-            setOverlayHandler(() => {
-                toggleOverlay(false)
+            document.getElementById('startupErrorTitle').textContent = Lang.queryJS('uibinder.startup.fatalErrorTitle')
+            document.getElementById('startupErrorDescription').innerHTML = Lang.queryJS('uibinder.startup.fatalErrorMessage')
+            const retryButton = document.getElementById('startupRetryButton')
+            retryButton.textContent = Lang.queryJS('uibinder.startup.retryButton')
+            retryButton.disabled = false
+            retryButton.onclick = () => {
+                retryButton.disabled = true
+                toggleOverlay(false, true, 'startupErrorContent')
                 document.getElementById('overlayContainer').style.background = ''
                 $('#loadingContainer').stop(true, true).show()
                 $('#loadSpinnerImage').addClass('rotating')
                 void startupController.retry()
-            })
-            setDismissHandler(() => {
-                remote.getCurrentWindow().close()
-            })
-            toggleOverlay(true, true)
+            }
+            const exitButton = document.getElementById('startupExitButton')
+            exitButton.textContent = Lang.queryJS('uibinder.startup.exitButton')
+            exitButton.onclick = () => remote.getCurrentWindow().close()
+            renderLauncherUpdateState()
+            toggleOverlay(true, true, 'startupErrorContent')
         })
     }, 750)
 }
@@ -726,8 +722,11 @@ const startupController = new StartupController(
 
 function startLauncherWhenReady(){
     if(document.readyState === 'interactive' || document.readyState === 'complete'){
+        launcherUpdateController.initialize(ConfigManager.getAllowPrerelease())
         bindDistributionNotice()
-        void startupController.start()
+        if(startupController.getState() === 'idle'){
+            void startupController.start()
+        }
     }
 }
 

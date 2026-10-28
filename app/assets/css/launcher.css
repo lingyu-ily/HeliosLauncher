@@ -6624,6 +6624,57 @@ button:disabled {
 }
 
 /* Dialogs and loading */
+#startupErrorContent {
+    box-sizing: border-box;
+    width: min(520px, calc(100% - 48px));
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding: 28px 32px;
+    border: 1px solid #514b46;
+    background: #242220;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+    text-align: center;
+}
+
+#startupErrorTitle {
+    margin: 0 0 16px;
+    color: #fff;
+    font-size: 20px;
+}
+
+#startupErrorDescription,
+#startupUpdateStatus {
+    color: #c0bab4;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+    -webkit-user-select: text;
+}
+
+#startupUpdateSection {
+    margin: 20px 0;
+    padding: 16px 0;
+    border-top: 1px solid #514b46;
+    border-bottom: 1px solid #514b46;
+}
+
+#startupErrorActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+
+#startupErrorContent button {
+    min-height: 40px;
+    padding: 8px 16px;
+}
+
+#startupErrorContent button:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
 #overlayContainer {
     align-items: center;
     justify-content: center;

@@ -1,5 +1,28 @@
 # Distribution Index
 
+## Per-server manifests (MapleCraft format 2)
+
+MapleCraft Launcher supports both the complete legacy index below and a per-server index from Nebula Console. Format 2 keeps global fields such as `version`, `rss`, `discord`, and `telemetry`, adds `"distributionFormat": 2`, and replaces each entry in `servers` with a reference:
+
+```json
+{
+    "id": "survival-1.20.1",
+    "url": "https://cdn.example.com/public/maplecraft/server-distributions/<sha256>.json",
+    "sha256": "<64 lowercase hexadecimal characters>",
+    "size": 123456
+}
+```
+
+Each referenced JSON is one complete server object, including `modules`, nested `subModules`, Java settings and custom UI fields. `sha256` and `size` describe its exact UTF-8 JSON bytes (after HTTP content decompression). Nebula emits compact JSON; the index's server order is preserved. Format 2 is a MapleCraft extension, not part of the upstream Helios distribution specification.
+
+The launcher fetches the index on startup/refresh, verifies cached server files by SHA-256 and byte length, and downloads only missing or changed files, with at most four requests in flight and a 12-second timeout per request. It still loads every server. One change within a server downloads that server's entire JSON again.
+
+Server files are cached under `distribution-servers/<sha256>.json` in the launcher data directory. Only after all servers pass validation does the launcher atomically replace its complete `distribution.json` cache. A failed download or commit uses the previous complete cache; no cache means startup fails. Historical server files and interrupted `.tmp` files are not automatically removed. Developer mode continues to read a complete `distribution_dev.json` locally.
+
+Deploy the compatible launcher **before** switching Nebula publishing to format 2. Older launchers cannot read the new index. The new launcher continues to accept the legacy complete index while rolling out the update.
+
+## Legacy complete index
+
 You can use [Nebula](https://github.com/dscalzi/Nebula) to automate the generation of a distribution index.
 
 The most up to date and accurate descriptions of the distribution spec can be viewed in [helios-distribution-types](https://github.com/dscalzi/helios-distribution-types).

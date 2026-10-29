@@ -619,7 +619,7 @@ function renderServerSidebar(distro){
 
         bindCachedServerImage(item.querySelector('.serverSidebarIcon'), server, 'icon', ServerGroups.getGroupIcon(group))
         item.querySelector('.serverSidebarName').textContent = group.name
-        item.querySelector('.serverSidebarVersion').textContent = server.minecraftVersion
+        item.querySelector('.serverSidebarVersion').textContent = server.version
         item.onclick = async () => {
             if(launchInProgress) return
             const serv = ServerGroups.selectGroupVersion(group, ConfigManager.getSelectedServerVersions()[group.id])
@@ -1331,7 +1331,7 @@ function updateSelectedServer(serv){
     closeVersionMenu()
     if(serv != null){
         selectedServerName.textContent = group?.name ?? serv.rawServer.name
-        selectedServerVersion.textContent = `${serv.rawServer.minecraftVersion} · ${ServerGroups.getLoaderLabel(serv.rawServer, Lang.queryJS('landing.selectedServer.vanilla'))}`
+        selectedServerVersion.textContent = `${serv.rawServer.minecraftVersion} · ${serv.rawServer.version}`
         selectedServerIcon.alt = ''
         bindCachedServerImage(selectedServerIcon, serv.rawServer, 'icon', group ? ServerGroups.getGroupIcon(group) : serv.rawServer.icon)
         updateServerSidebarSelection(serverLandingSections.has(getLandingSection()) ? serv.rawServer.id : null)
@@ -1420,7 +1420,7 @@ function openVersionMenu(){
         label.textContent = raw.versionName ?? raw.version
         const details = document.createElement('span')
         details.className = 'serverVersionMenuDetails'
-        details.textContent = `${raw.minecraftVersion} · ${raw.version}`
+        details.textContent = `${raw.minecraftVersion} · ${ServerGroups.getLoaderLabel(raw, Lang.queryJS('landing.selectedServer.vanilla'))}`
         item.title = `${label.textContent}\n${details.textContent}`
         const check = document.createElement('span')
         check.className = 'serverVersionMenuCheck'

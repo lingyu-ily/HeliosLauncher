@@ -105,6 +105,23 @@ test('downloads only the changed server and handles addition, removal and reorde
     assert.deepEqual(f.requests.map(request => request.url), [ROOT_URL])
 })
 
+test('retains version groups through verified downloads, offline cache and default-only updates', async () => {
+    const f = await fixture([serverFixture('legacy-1.20.1'), serverFixture('version-beta', { mainServer: false })])
+    const group = { id: 'survival', name: 'Survival', defaultVersionId: 'legacy-1.20.1', versionIds: ['legacy-1.20.1', 'version-beta'] }
+    f.current.index.serverGroups = [group]
+    const api = f.api()
+    assert.deepEqual((await api.getDistribution()).rawDistribution.serverGroups, [group])
+    f.requests.length = 0
+    f.current.index.serverGroups = [{ ...group, defaultVersionId: 'version-beta' }]
+    const refreshed = await api.refreshDistributionOrFallback()
+    assert.equal(refreshed.rawDistribution.serverGroups[0].defaultVersionId, 'version-beta')
+    assert.deepEqual(f.requests.map(request => request.url), [ROOT_URL])
+    f.requestClient.get = async () => { throw new Error('offline') }
+    const offline = await f.api().getDistribution()
+    assert.deepEqual(offline.rawDistribution.serverGroups, refreshed.rawDistribution.serverGroups)
+    assert.deepEqual(offline.servers.map(server => server.rawServer.id), group.versionIds)
+})
+
 test('limits concurrent server requests to four while preserving index order', async () => {
     const f = await fixture(Array.from({ length: 9 }, (_, index) => serverFixture(`server-${index}`, { mainServer: index === 0 })))
     const get = f.requestClient.get

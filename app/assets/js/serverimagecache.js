@@ -44,6 +44,18 @@ function normalizeContentType(value){
     return typeof value === 'string' ? value.split(';', 1)[0].trim().toLowerCase() : ''
 }
 
+function serverImageIdentity(descriptor){
+    const source = normalizeRemoteImageSource(descriptor.source)
+    const grouped = typeof descriptor.groupId === 'string' && descriptor.groupId.length > 0
+    return JSON.stringify([
+        grouped ? 'group' : 'server',
+        grouped ? descriptor.groupId : descriptor.serverId,
+        descriptor.type,
+        source,
+        grouped ? '' : descriptor.serverVersion ?? ''
+    ])
+}
+
 async function requestRemoteImage(url, { headers, maximumSize }){
     const request = got.stream(url, {
         headers,
@@ -127,13 +139,16 @@ class ServerImageCache {
         if(SERVER_IMAGE_TYPES[descriptor.type] == null){
             throw new Error(`Unsupported server image type: ${descriptor.type}`)
         }
-        const serverHash = crypto.createHash('sha256').update(descriptor.serverId).digest('hex').slice(0, 32)
+        const source = normalizeRemoteImageSource(descriptor.source)
+        const grouped = typeof descriptor.groupId === 'string' && descriptor.groupId.length > 0
+        const cacheOwner = grouped ? JSON.stringify(['group', descriptor.groupId, source]) : descriptor.serverId
+        const serverHash = crypto.createHash('sha256').update(cacheOwner).digest('hex').slice(0, 32)
         const cacheDirectory = path.join(this.cacheRoot, serverHash, descriptor.type)
         return {
             serverId: descriptor.serverId,
-            serverVersion: typeof descriptor.serverVersion === 'string' ? descriptor.serverVersion : '',
+            serverVersion: !grouped && typeof descriptor.serverVersion === 'string' ? descriptor.serverVersion : '',
             type: descriptor.type,
-            source: normalizeRemoteImageSource(descriptor.source),
+            source,
             serverHash,
             cacheDirectory,
             metadataPath: path.join(cacheDirectory, 'metadata.json'),
@@ -379,5 +394,6 @@ module.exports = {
     SERVER_IMAGE_TYPES,
     ServerImageCache,
     normalizeRemoteImageSource,
-    requestRemoteImage
+    requestRemoteImage,
+    serverImageIdentity
 }

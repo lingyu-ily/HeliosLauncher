@@ -104,6 +104,7 @@ const DEFAULT_CONFIG = {
     },
     clientToken: null,
     selectedServer: null, // Resolved
+    selectedServerVersions: {},
     selectedAccount: null,
     authenticationDatabase: {},
     modConfigurations: [],
@@ -330,6 +331,18 @@ exports.getSelectedServer = function(def = false){
  */
 exports.setSelectedServer = function(serverID){
     config.selectedServer = serverID
+}
+
+exports.getSelectedServerVersions = function(){
+    return { ...(config.selectedServerVersions ?? {}) }
+}
+
+exports.setSelectedServerVersion = function(groupId, versionId){
+    config.selectedServerVersions = { ...(config.selectedServerVersions ?? {}), [groupId]: versionId }
+}
+
+exports.resetSelectedServerVersions = function(){
+    config.selectedServerVersions = {}
 }
 
 /**

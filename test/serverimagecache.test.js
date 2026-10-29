@@ -7,7 +7,8 @@ const { test } = require('node:test')
 const {
     SERVER_IMAGE_FAILURE_RETRY_MS,
     SERVER_IMAGE_REVALIDATE_MS,
-    ServerImageCache
+    ServerImageCache,
+    serverImageIdentity
 } = require('../app/assets/js/serverimagecache')
 
 const PNG_A = Buffer.from('89504e470d0a1a0a01020304', 'hex')
@@ -202,4 +203,75 @@ test('rejects oversized images and credentialed remote URLs', async t => {
     }))
     assert.equal(credentialed.currentUrl, null)
     assert.equal(credentialed.refresh, null)
+})
+
+test('group versions share a download, cached URL and persisted freshness across version changes', async t => {
+    const cacheRoot = await temporaryCacheDirectory()
+    t.after(() => rm(cacheRoot, { recursive: true, force: true }))
+    let completeRequest
+    let requests = 0
+    const requestImage = () => {
+        requests++
+        return new Promise(resolve => { completeRequest = resolve })
+    }
+    const cache = new ServerImageCache(cacheRoot, { requestImage })
+    const stable = descriptor({ groupId: 'survival' })
+    const beta = descriptor({ groupId: 'survival', serverId: 'beta', serverVersion: '2.0.0' })
+    const [first, second] = await Promise.all([cache.resolve(stable), cache.resolve(beta)])
+    assert.strictEqual(first.refresh, second.refresh)
+    assert.equal(serverImageIdentity(stable), serverImageIdentity(beta))
+    assert.equal(requests, 1)
+    completeRequest(imageResponse())
+    const cachedUrl = await first.refresh
+    const restarted = new ServerImageCache(cacheRoot, { requestImage })
+    assert.deepEqual(await restarted.resolve(beta), { currentUrl: cachedUrl, refresh: null })
+    assert.deepEqual(await restarted.resolve(stable), { currentUrl: cachedUrl, refresh: null })
+    assert.equal(requests, 1)
+})
+
+test('group caches isolate sources, groups and image types while preserving the legacy cache', async t => {
+    const cacheRoot = await temporaryCacheDirectory()
+    t.after(() => rm(cacheRoot, { recursive: true, force: true }))
+    let requests = 0
+    const cache = new ServerImageCache(cacheRoot, {
+        requestImage: async () => { requests++; return imageResponse() }
+    })
+    const legacy = await (await cache.resolve(descriptor())).refresh
+    const grouped = descriptor({ groupId: 'survival' })
+    const variants = [grouped, { ...grouped, groupId: 'creative' },
+        { ...grouped, source: 'https://assets.example.test/new.png' }, { ...grouped, type: 'logo' }]
+    const urls = await Promise.all(variants.map(async value => (await cache.resolve(value)).refresh))
+    assert.equal(new Set([legacy, ...urls]).size, 5)
+    assert.equal((await cache.resolve(descriptor())).currentUrl, legacy)
+    assert.equal((await cache.resolve(grouped)).currentUrl, urls[0])
+    assert.equal(requests, 5)
+})
+
+test('group revalidation and failure cooldown are shared across versions', async t => {
+    const cacheRoot = await temporaryCacheDirectory()
+    t.after(() => rm(cacheRoot, { recursive: true, force: true }))
+    let now = 1000
+    const requests = []
+    const cache = new ServerImageCache(cacheRoot, {
+        now: () => now,
+        requestImage: async (_url, options) => {
+            requests.push(options)
+            if(requests.length === 1) return imageResponse()
+            if(requests.length === 2) return { statusCode: 304, headers: {}, body: Buffer.alloc(0) }
+            throw new Error('offline')
+        }
+    })
+    const stable = descriptor({ groupId: 'survival' })
+    const beta = { ...stable, serverId: 'beta', serverVersion: '2.0.0' }
+    const initialUrl = await (await cache.resolve(stable)).refresh
+    now += SERVER_IMAGE_REVALIDATE_MS
+    assert.equal(await (await cache.resolve(beta)).refresh, initialUrl)
+    assert.equal(requests[1].headers['If-None-Match'], '"icon-a"')
+    assert.equal((await cache.resolve(stable)).refresh, null)
+    now += SERVER_IMAGE_REVALIDATE_MS
+    await assert.rejects((await cache.resolve(beta)).refresh, /offline/)
+    assert.deepEqual(await cache.resolve(stable), { currentUrl: initialUrl, refresh: null })
+    now += SERVER_IMAGE_FAILURE_RETRY_MS
+    await assert.rejects((await cache.resolve(stable)).refresh, /offline/)
+    assert.equal(requests.length, 4)
 })

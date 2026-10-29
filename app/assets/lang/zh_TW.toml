@@ -1,4 +1,5 @@
 [ejs.landing]
+versionMenu = "切換版本"
 updateAvailableTooltip = "有可用更新"
 usernamePlaceholder = "使用者名稱"
 usernameEditButton = "編輯"
@@ -258,6 +259,8 @@ cacheFailed = "無法快取背景影片"
 unavailable = "背景影片目前無法播放"
 
 [js.landing.selectedServer]
+vanilla = "原版"
+versionUnavailable = "此版本已無法使用，請重新選擇版本。"
 noSelection = "尚未選擇伺服器"
 loading = "載入中…"
 
@@ -444,7 +447,7 @@ okButton = "確定"
 
 [js.uibinder.startup]
 fatalErrorTitle = "嚴重錯誤：無法載入發行索引"
-fatalErrorMessage = "無法載入遠端發行索引，且沒有有效的本機副本；遠端請求會在 12 秒後停止。<br><br>請確認網路連線後重試。"
+fatalErrorMessage = "無法載入發行索引，且沒有有效的本機快取。<br><br>請確認網路連線後重試。"
 retryButton = "重試"
 exitButton = "結束 Launcher"
 

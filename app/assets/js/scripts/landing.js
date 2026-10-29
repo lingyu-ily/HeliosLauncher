@@ -38,7 +38,11 @@ const {
 const DiscordWrapper          = require('./assets/js/discordwrapper')
 const { DiscordPresenceController } = require('./assets/js/discordpresence')
 const ProcessBuilder          = require('./assets/js/processbuilder')
-const { ServerImageCache, normalizeRemoteImageSource } = require('./assets/js/serverimagecache')
+const ServerGroups = require('./assets/js/servergroups')
+let landingDistribution = null
+let launchVersionId = null
+const { ServerImageCache, normalizeRemoteImageSource, serverImageIdentity } = require('./assets/js/serverimagecache')
+const { ServerBackgroundPool, loadDecodedBackground } = require('./assets/js/serverbackgroundpool')
 const { ServerStatusCache }   = require('./assets/js/serverstatuscache')
 
 // Launch Elements
@@ -87,7 +91,20 @@ const defaultServerPresentation = {
 const serverImageCache = new ServerImageCache(nodePath.join(ConfigManager.getLauncherDirectory(), 'server-image-cache'))
 const serverImageBindings = new WeakMap()
 const reportedServerImageFailures = new WeakSet()
+// Media work survives image and text updates within the same server group.
 let heroPresentationSequence = 0
+let heroPresentationId = null
+let heroTransitionSequence = 0
+let heroMediaIdentity = null
+let heroBackgroundBinding = null
+let heroBackgroundUrl = defaultServerPresentation.background
+let serverBackgroundPreloadSequence = 0
+const serverBackgroundPool = new ServerBackgroundPool({
+    cache: serverImageCache,
+    loadImage: source => loadDecodedBackground(source, { createImage: () => new Image() }),
+    onUpdate: applyHeroBackgroundAsset,
+    onError: (error, resource) => loggerLanding.warn(`Unable to prepare the background ${resource.source}.`, error)
+})
 let activeHeroMedia = null
 let activeHeroMediaReady = false
 let activeHeroMediaDownload = null
@@ -161,6 +178,8 @@ launchAccountName.onclick = () => {
 /* Launch Progress Wrapper Functions */
 
 function refreshLaunchButtonState(){
+    server_selection_button.disabled = launchInProgress || !launchServerAvailable
+    if(launchInProgress) closeVersionMenu()
     launch_button.disabled = launchInProgress || !launchServerAvailable
     launch_button.toggleAttribute('launching', launchInProgress)
     if(launchInProgress){
@@ -179,6 +198,16 @@ function refreshLaunchButtonState(){
  */
 function toggleLaunchArea(loading){
     launchInProgress = loading
+    if(!loading){
+        launchVersionId = null
+        if(landingDistribution){
+            const resolved = ServerGroups.resolveSelectedVersion(landingDistribution, ConfigManager.getSelectedServer(), ConfigManager.getSelectedServerVersions())
+            if(ConfigManager.getSelectedServer() !== resolved?.rawServer.id){
+                updateSelectedServer(resolved)
+                renderServerSidebar(landingDistribution)
+            }
+        }
+    }
     launch_details.toggleAttribute('active', loading)
     launch_details.setAttribute('aria-hidden', String(!loading))
     launch_details.setAttribute('aria-busy', String(loading))
@@ -232,10 +261,14 @@ function setLaunchEnabled(val){
 
 // Bind launch button
 launch_button.addEventListener('click', async e => {
+    if(launchInProgress) return
+    launchVersionId = ConfigManager.getSelectedServer()
+    toggleLaunchArea(true)
     loggerLanding.info('Launching game..')
     try {
-        const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-        const jExe = ConfigManager.getJavaExecutable(ConfigManager.getSelectedServer())
+        const server = (await DistroAPI.getDistribution()).getServerById(launchVersionId)
+        if(server == null) throw new Error('Selected version is unavailable.')
+        const jExe = ConfigManager.getJavaExecutable(launchVersionId)
         if(jExe == null){
             await asyncSystemScan(server.effectiveJavaOptions)
         } else {
@@ -533,7 +566,8 @@ function setServerSidebarState(message, state = 'loading'){
 
 function updateServerSidebarSelection(serverId){
     for(const item of serverSidebarList.getElementsByClassName('serverSidebarItem')){
-        const selected = item.getAttribute('servid') === serverId
+        const group = landingDistribution && ServerGroups.getServerGroup(landingDistribution, serverId)
+        const selected = item.getAttribute('groupid') === group?.id
         item.toggleAttribute('selected', selected)
         item.setAttribute('aria-selected', selected.toString())
     }
@@ -549,35 +583,47 @@ function renderServerSidebar(distro){
         return
     }
 
+    landingDistribution = distro
     const selectedId = ConfigManager.getSelectedServer()
-    const fragment = document.createDocumentFragment()
-    for(const serv of distro.servers){
+    const existingItems = new Map(Array.from(serverSidebarList.getElementsByClassName('serverSidebarItem'))
+        .map(item => [item.getAttribute('groupid'), item]))
+    const items = []
+    for(const group of ServerGroups.getServerGroups(distro)){
+        const serv = ServerGroups.selectGroupVersion(group, ConfigManager.getSelectedServerVersions()[group.id])
+        if(!serv) continue
         const server = serv.rawServer
-        const item = document.createElement('button')
-        const selected = serverLandingSections.has(getLandingSection()) && server.id === selectedId
-        item.type = 'button'
-        item.className = 'serverSidebarItem'
-        item.setAttribute('role', 'option')
+        let item = existingItems.get(group.id)
+        if(!item){
+            item = document.createElement('button')
+            item.type = 'button'
+            item.className = 'serverSidebarItem'
+            item.setAttribute('role', 'option')
+
+            const icon = document.createElement('img')
+            icon.className = 'serverSidebarIcon'
+            icon.alt = ''
+            const copy = document.createElement('span')
+            copy.className = 'serverSidebarCopy'
+            const name = document.createElement('span')
+            name.className = 'serverSidebarName'
+            const version = document.createElement('span')
+            version.className = 'serverSidebarVersion'
+            copy.append(name, version)
+            item.append(icon, copy)
+        }
+        const selected = serverLandingSections.has(getLandingSection()) && group.versions.some(version => version.rawServer.id === selectedId)
         item.setAttribute('servid', server.id)
+        item.setAttribute('groupid', group.id)
         item.setAttribute('aria-selected', selected.toString())
         item.toggleAttribute('selected', selected)
 
-        const icon = document.createElement('img')
-        icon.className = 'serverSidebarIcon'
-        icon.alt = ''
-        bindCachedServerImage(icon, server, 'icon', server.icon)
-
-        const copy = document.createElement('span')
-        copy.className = 'serverSidebarCopy'
-        const name = document.createElement('span')
-        name.className = 'serverSidebarName'
-        name.textContent = server.name
-        const version = document.createElement('span')
-        version.className = 'serverSidebarVersion'
-        version.textContent = server.minecraftVersion
-        copy.append(name, version)
-        item.append(icon, copy)
+        bindCachedServerImage(item.querySelector('.serverSidebarIcon'), server, 'icon', ServerGroups.getGroupIcon(group))
+        item.querySelector('.serverSidebarName').textContent = group.name
+        item.querySelector('.serverSidebarVersion').textContent = server.minecraftVersion
         item.onclick = async () => {
+            if(launchInProgress) return
+            const serv = ServerGroups.selectGroupVersion(group, ConfigManager.getSelectedServerVersions()[group.id])
+            const server = serv.rawServer
             const requestSequence = beginLauncherShellNavigation()
             if(getCurrentView() === VIEWS.settings){
                 let serverChanged = false
@@ -618,9 +664,16 @@ function renderServerSidebar(distro){
             }
             await refreshServerStatus(true)
         }
-        fragment.appendChild(item)
+        items.push(item)
     }
-    serverSidebarList.replaceChildren(fragment)
+    for(const [index, item] of items.entries()){
+        if(serverSidebarList.children[index] !== item){
+            serverSidebarList.insertBefore(item, serverSidebarList.children[index] ?? null)
+        }
+    }
+    while(serverSidebarList.children.length > items.length){
+        serverSidebarList.lastElementChild.remove()
+    }
 }
 
 serverSidebarList.addEventListener('keydown', (e) => {
@@ -652,9 +705,19 @@ function createServerImageDescriptor(rawServer, type, source){
     return {
         serverId: rawServer.id,
         serverVersion: rawServer.version,
+        groupId: getServerPresentationGroupId(rawServer),
         type,
         source: normalizedSource
     }
+}
+
+function getServerPresentationGroupId(rawServer){
+    return landingDistribution?.rawDistribution?.serverGroups
+        ?.find(group => group.versionIds.includes(rawServer?.id))?.id
+}
+
+function getServerImageBindingIdentity(descriptor, source){
+    return descriptor == null ? source : serverImageIdentity(descriptor)
 }
 
 function reportServerImageFailure(refresh, descriptor, err){
@@ -667,6 +730,12 @@ function reportServerImageFailure(refresh, descriptor, err){
 
 function applyServerImageElementSource(element, url, descriptor, binding, onVisibilityChange = null){
     if(serverImageBindings.get(element) !== binding){
+        return
+    }
+    if(url && element.getAttribute('src') === url){
+        return
+    }
+    if(!url && !element.hasAttribute('src') && element.style.visibility === 'hidden'){
         return
     }
     element.onload = null
@@ -702,121 +771,48 @@ function applyServerImageElementSource(element, url, descriptor, binding, onVisi
     element.src = url
 }
 
-function bindCachedServerImage(element, rawServer, type, source){
-    const binding = Symbol('server-image-binding')
-    serverImageBindings.set(element, binding)
-    applyServerImageElementSource(element, null, null, binding)
+function bindCachedServerImage(element, rawServer, type, source, onVisibilityChange = null){
     const candidate = normalizeHeroCopy(source)
-    if(candidate.length === 0){
-        return
-    }
     const descriptor = createServerImageDescriptor(rawServer, type, candidate)
+    const identity = getServerImageBindingIdentity(descriptor, candidate)
+    let binding = serverImageBindings.get(element)
+    if(binding?.identity !== identity){
+        binding = { identity, pending: null }
+        serverImageBindings.set(element, binding)
+        applyServerImageElementSource(element, null, null, binding, onVisibilityChange)
+    }
+    if(binding.pending){
+        return binding.pending
+    }
 
     if(descriptor == null){
         applyServerImageElementSource(
             element,
             isInvalidRemoteImageSource(candidate) ? null : candidate,
             null,
-            binding
+            binding,
+            onVisibilityChange
         )
         return
     }
 
-    void serverImageCache.resolve(descriptor).then(resolution => {
+    binding.pending = serverImageCache.resolve(descriptor).then(async resolution => {
         if(resolution.currentUrl != null){
-            applyServerImageElementSource(element, resolution.currentUrl, descriptor, binding)
+            applyServerImageElementSource(element, resolution.currentUrl, descriptor, binding, onVisibilityChange)
         }
         if(resolution.refresh != null){
-            void resolution.refresh.then(url => {
+            await resolution.refresh.then(url => {
                 if(url != null){
-                    applyServerImageElementSource(element, url, descriptor, binding)
+                    applyServerImageElementSource(element, url, descriptor, binding, onVisibilityChange)
                 }
             }).catch(err => reportServerImageFailure(resolution.refresh, descriptor, err))
         }
     }).catch(err => {
         loggerLanding.warn(`Unable to resolve the ${descriptor.type} image for ${descriptor.serverId}.`, err)
+    }).finally(() => {
+        binding.pending = null
     })
-}
-
-// Bind selected server
-function preloadImageUrl(source, fallback = null){
-    const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
-    if(!candidate){
-        return Promise.resolve(fallback)
-    }
-    return new Promise(resolve => {
-        const image = new Image()
-        let settled = false
-        const finish = value => {
-            if(settled){
-                return
-            }
-            settled = true
-            clearTimeout(timeout)
-            resolve(value)
-        }
-        const timeout = setTimeout(() => finish(fallback), 5000)
-        image.onload = () => finish(candidate)
-        image.onerror = () => {
-            if(!fallback || candidate === fallback){
-                finish(fallback)
-                return
-            }
-            const fallbackImage = new Image()
-            fallbackImage.onload = () => finish(fallback)
-            fallbackImage.onerror = () => finish(fallback)
-            fallbackImage.src = fallback
-        }
-        image.src = candidate
-    })
-}
-
-async function resolveHeroImage(rawServer, type, source, fallback = null){
-    const candidate = typeof source === 'string' && source.trim().length > 0 ? source.trim() : fallback
-    const descriptor = createServerImageDescriptor(rawServer, type, candidate)
-    if(descriptor == null){
-        return {
-            currentUrl: await preloadImageUrl(isInvalidRemoteImageSource(candidate) ? fallback : candidate, fallback),
-            refresh: null
-        }
-    }
-
-    let resolution
-    try {
-        resolution = await serverImageCache.resolve(descriptor)
-    } catch(err) {
-        loggerLanding.warn(`Unable to resolve the ${descriptor.type} image for ${descriptor.serverId}.`, err)
-        return { currentUrl: fallback, refresh: null }
-    }
-
-    const requestedCurrentUrl = resolution.currentUrl ?? fallback
-    const currentUrl = await preloadImageUrl(requestedCurrentUrl, fallback)
-    if(resolution.currentUrl != null && currentUrl !== resolution.currentUrl){
-        await serverImageCache.invalidate(descriptor).catch(err => {
-            loggerLanding.warn(`Unable to invalidate the ${descriptor.type} image for ${descriptor.serverId}.`, err)
-        })
-    }
-
-    const refresh = resolution.refresh == null
-        ? null
-        : resolution.refresh.then(async url => {
-            if(url == null){
-                return null
-            }
-            const loadedUrl = await preloadImageUrl(url, fallback)
-            if(loadedUrl !== url){
-                await serverImageCache.invalidate(descriptor).catch(err => {
-                    loggerLanding.warn(`Unable to invalidate the ${descriptor.type} image for ${descriptor.serverId}.`, err)
-                })
-                return null
-            }
-            return loadedUrl
-        }).catch(err => {
-            reportServerImageFailure(resolution.refresh, descriptor, err)
-            return null
-        })
-
-    return { currentUrl, refresh }
+    return binding.pending
 }
 
 function normalizeHeroVideoDescriptor(value){
@@ -1215,19 +1211,66 @@ launcherHeroVolumeSlider.onchange = () => {
     ConfigManager.save()
 }
 
-async function applyServerPresentation(serv){
-    const requestSequence = ++heroPresentationSequence
-    const logoBinding = Symbol('hero-logo-binding')
-    serverImageBindings.set(launcherHeroLogo, logoBinding)
-    const setLogoVisibility = visible => {
-        launcherHeroContent.hidden = !visible
-        if(visible){
-            playHeroPresentationEnter()
-        }
+function createHeroBackgroundResource(rawServer, source){
+    const candidate = normalizeHeroCopy(source) || defaultServerPresentation.background
+    const safeSource = isInvalidRemoteImageSource(candidate) ? defaultServerPresentation.background : candidate
+    const descriptor = createServerImageDescriptor(rawServer, 'background', safeSource)
+    return { key: getServerImageBindingIdentity(descriptor, safeSource), source: safeSource, descriptor }
+}
+
+function applyHeroBackgroundAsset(key, asset){
+    if(heroBackgroundBinding?.identity === key && asset != null && heroBackgroundUrl !== asset.url){
+        heroBackgroundUrl = asset.url
+        launcherHero.style.backgroundImage = `url(${JSON.stringify(asset.url)})`
     }
-    applyServerImageElementSource(launcherHeroLogo, null, null, logoBinding, setLogoVisibility)
+}
+
+function applyHeroBackground(rawServer, source){
+    const resource = createHeroBackgroundResource(rawServer, source)
+    heroBackgroundBinding = { identity: resource.key }
+    applyHeroBackgroundAsset(resource.key, serverBackgroundPool.get(resource.key))
+    return serverBackgroundPool.prepare(resource, { priority: true })
+}
+
+function preloadServerBackgrounds(distro){
+    const resources = new Map()
+    const selectedId = ConfigManager.getSelectedServer()
+    const servers = [...(distro?.servers ?? [])].sort((left, right) =>
+        Number(right.rawServer.id === selectedId) - Number(left.rawServer.id === selectedId))
+    for(const serv of servers){
+        const resource = createHeroBackgroundResource(serv.rawServer, serv.rawServer.ui?.hero?.background)
+        resources.set(resource.key, resource)
+    }
+    serverBackgroundPool.retain([...resources.values()])
+    return Promise.all([...resources.values()].map(resource => serverBackgroundPool.prepare(resource)))
+}
+
+function scheduleServerBackgroundPreload(distro){
+    const sequence = ++serverBackgroundPreloadSequence
+    requestAnimationFrame(() => {
+        if(sequence === serverBackgroundPreloadSequence && landingDistribution === distro){
+            void preloadServerBackgrounds(distro)
+        }
+    })
+}
+
+function applyServerPresentation(serv){
     const rawServer = serv?.rawServer
     const serverId = rawServer?.id || null
+    const groupId = getServerPresentationGroupId(rawServer)
+    const presentationId = JSON.stringify([groupId == null ? 'server' : 'group', groupId ?? serverId])
+    if(heroPresentationId !== presentationId){
+        heroPresentationId = presentationId
+        const sequence = ++heroTransitionSequence
+        launcherHero.setAttribute('changing', '')
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                if(sequence === heroTransitionSequence){
+                    launcherHero.removeAttribute('changing')
+                }
+            }, 200)
+        })
+    }
     const hero = rawServer?.ui?.hero || {}
     const video = normalizeHeroVideoDescriptor(hero.video)
     const eyebrow = typeof hero.eyebrow === 'string' && hero.eyebrow.trim()
@@ -1240,57 +1283,36 @@ async function applyServerPresentation(serv){
         title: normalizeHeroCopy(hero.title),
         tagline: normalizeHeroCopy(hero.tagline)
     }
-    const logoDescriptor = createServerImageDescriptor(rawServer, 'logo', presentation.logo)
-
     launcherGameEyebrow.textContent = presentation.eyebrow
     launcherGameEyebrow.title = presentation.eyebrow
-    configureHeroMedia(serverId, video, requestSequence)
+    launcherHeroLogo.alt = presentation.title || rawServer?.name || 'MapleCraft'
+    launcherHeroWordmark.textContent = presentation.title
+    launcherHeroWordmark.toggleAttribute('hidden', presentation.title.length === 0)
+    launcherHeroTagline.textContent = presentation.tagline
+    launcherHeroTagline.toggleAttribute('hidden', presentation.tagline.length === 0)
+    newsPreviewTitle.textContent = presentation.title || defaultServerPresentation.newsTitle
 
-    const [background, logo] = await Promise.all([
-        resolveHeroImage(rawServer, 'background', presentation.background, defaultServerPresentation.background),
-        resolveHeroImage(rawServer, 'logo', presentation.logo)
+    const mediaIdentity = JSON.stringify([presentationId, video])
+    if(heroMediaIdentity !== mediaIdentity){
+        heroMediaIdentity = mediaIdentity
+        configureHeroMedia(serverId, video, ++heroPresentationSequence)
+    }
+
+    const setLogoVisibility = visible => {
+        const wasHidden = launcherHeroContent.hidden
+        launcherHeroContent.hidden = !visible
+        if(visible && wasHidden){
+            playHeroPresentationEnter()
+        }
+    }
+    return Promise.all([
+        applyHeroBackground(rawServer, presentation.background),
+        bindCachedServerImage(launcherHeroLogo, rawServer, 'logo', presentation.logo, setLogoVisibility)
     ])
-    if(requestSequence !== heroPresentationSequence){
-        return
-    }
-    launcherHero.setAttribute('changing', '')
-    requestAnimationFrame(() => {
-        if(requestSequence !== heroPresentationSequence){
-            return
-        }
-        launcherHero.style.backgroundImage = `url(${JSON.stringify(background.currentUrl)})`
-        launcherHeroLogo.alt = presentation.title || rawServer?.name || 'MapleCraft'
-        launcherHeroWordmark.textContent = presentation.title
-        launcherHeroWordmark.toggleAttribute('hidden', presentation.title.length === 0)
-        launcherHeroTagline.textContent = presentation.tagline
-        launcherHeroTagline.toggleAttribute('hidden', presentation.tagline.length === 0)
-        newsPreviewTitle.textContent = presentation.title || defaultServerPresentation.newsTitle
-        applyServerImageElementSource(launcherHeroLogo, logo.currentUrl, logoDescriptor, logoBinding, setLogoVisibility)
-        if(logo.refresh != null){
-            void logo.refresh.then(url => {
-                if(url != null && requestSequence === heroPresentationSequence){
-                    applyServerImageElementSource(launcherHeroLogo, url, logoDescriptor, logoBinding, setLogoVisibility)
-                }
-            })
-        }
-        setTimeout(() => {
-            if(requestSequence === heroPresentationSequence){
-                launcherHero.removeAttribute('changing')
-            }
-        }, 200)
-    })
-
-    if(background.refresh != null){
-        void background.refresh.then(url => {
-            if(url != null && requestSequence === heroPresentationSequence){
-                background.currentUrl = url
-                launcherHero.style.backgroundImage = `url(${JSON.stringify(url)})`
-            }
-        })
-    }
 }
 
 function updateSelectedServer(serv){
+    if(launchInProgress && serv?.rawServer.id !== launchVersionId) return false
     if(getLandingSection() === 'mods' && !commitLandingModsView()){
         return false
     }
@@ -1303,12 +1325,15 @@ function updateSelectedServer(serv){
         fullSettingsSave()
     }
     ConfigManager.setSelectedServer(serv != null ? serv.rawServer.id : null)
+    const group = serv && landingDistribution && ServerGroups.getServerGroup(landingDistribution, serv.rawServer.id)
+    if(group) ConfigManager.setSelectedServerVersion(group.id, serv.rawServer.id)
     ConfigManager.save()
+    closeVersionMenu()
     if(serv != null){
-        selectedServerName.textContent = serv.rawServer.name
-        selectedServerVersion.textContent = `${serv.rawServer.minecraftVersion} · ${serv.rawServer.version}`
+        selectedServerName.textContent = group?.name ?? serv.rawServer.name
+        selectedServerVersion.textContent = `${serv.rawServer.minecraftVersion} · ${ServerGroups.getLoaderLabel(serv.rawServer, Lang.queryJS('landing.selectedServer.vanilla'))}`
         selectedServerIcon.alt = ''
-        bindCachedServerImage(selectedServerIcon, serv.rawServer, 'icon', serv.rawServer.icon)
+        bindCachedServerImage(selectedServerIcon, serv.rawServer, 'icon', group ? ServerGroups.getGroupIcon(group) : serv.rawServer.icon)
         updateServerSidebarSelection(serverLandingSections.has(getLandingSection()) ? serv.rawServer.id : null)
     } else {
         selectedServerName.textContent = Lang.queryJS('landing.selectedServer.noSelection')
@@ -1341,7 +1366,131 @@ function focusSelectedServerSidebar(){
         serverSidebarList.focus()
     }
 }
-server_selection_button.onclick = focusSelectedServerSidebar
+const serverVersionMenu = document.getElementById('serverVersionMenu')
+const serverVersionMenuList = document.getElementById('serverVersionMenuList')
+let versionMenuCloseTimer = null
+let versionMenuOpenFrame = null
+function isVersionMenuOpen(){
+    return server_selection_button.getAttribute('aria-expanded') === 'true'
+}
+function closeVersionMenu(returnFocus = false){
+    const menu = document.getElementById('serverVersionMenu')
+    if(!menu) return
+    if(isVersionMenuOpen()){
+        clearTimeout(versionMenuCloseTimer)
+        if(versionMenuOpenFrame != null){
+            cancelAnimationFrame(versionMenuOpenFrame)
+            versionMenuOpenFrame = null
+        }
+        menu.removeAttribute('open')
+        menu.inert = true
+        menu.setAttribute('aria-hidden', 'true')
+        server_selection_button.setAttribute('aria-expanded', 'false')
+        const finish = () => {
+            versionMenuCloseTimer = null
+            if(!isVersionMenuOpen()) menu.hidden = true
+        }
+        if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+            finish()
+        } else {
+            versionMenuCloseTimer = setTimeout(finish, 180)
+        }
+    }
+    if(returnFocus) server_selection_button.focus()
+}
+function openVersionMenu(){
+    if(launchInProgress || !landingDistribution || isVersionMenuOpen()) return
+    const group = ServerGroups.getServerGroup(landingDistribution, ConfigManager.getSelectedServer())
+    if(!group) return
+    clearTimeout(versionMenuCloseTimer)
+    versionMenuCloseTimer = null
+    if(versionMenuOpenFrame != null) cancelAnimationFrame(versionMenuOpenFrame)
+    serverVersionMenuList.replaceChildren()
+    for(const version of group.versions){
+        const raw = version.rawServer
+        const item = document.createElement('button')
+        item.type = 'button'
+        item.setAttribute('role', 'menuitemradio')
+        const selected = raw.id === ConfigManager.getSelectedServer()
+        item.setAttribute('aria-checked', String(selected))
+        const copy = document.createElement('span')
+        copy.className = 'serverVersionMenuCopy'
+        const label = document.createElement('strong')
+        label.className = 'serverVersionMenuName'
+        label.textContent = raw.versionName ?? raw.version
+        const details = document.createElement('span')
+        details.className = 'serverVersionMenuDetails'
+        details.textContent = `${raw.minecraftVersion} · ${raw.version}`
+        item.title = `${label.textContent}\n${details.textContent}`
+        const check = document.createElement('span')
+        check.className = 'serverVersionMenuCheck'
+        check.setAttribute('aria-hidden', 'true')
+        check.textContent = selected ? '✓' : ''
+        copy.append(label, details)
+        item.append(copy, check)
+        item.onclick = async () => {
+            if(launchInProgress) return
+            if(updateSelectedServer(version) !== false){
+                renderServerSidebar(landingDistribution)
+                closeVersionMenu(true)
+                await refreshServerStatus(true)
+            }
+        }
+        serverVersionMenuList.append(item)
+    }
+    const noticeBottom = isDistributionNoticeVisible()
+        ? document.getElementById('distributionNotice').offsetHeight : 0
+    const viewportTop = document.getElementById('landingWorkspaceScroll').getBoundingClientRect().top
+    const topBoundary = Math.max(8, noticeBottom + 8, viewportTop + 8)
+    const availableHeight = server_selection_button.getBoundingClientRect().top - topBoundary - 8
+    serverVersionMenu.hidden = false
+    serverVersionMenu.inert = false
+    serverVersionMenu.setAttribute('aria-hidden', 'false')
+    server_selection_button.setAttribute('aria-expanded', 'true')
+    const minimumHeight = document.getElementById('serverVersionMenuTitle').offsetHeight + 60
+    serverVersionMenu.style.maxHeight = `${Math.max(minimumHeight, Math.min(340, availableHeight))}px`
+    const finish = () => {
+        versionMenuOpenFrame = null
+        if(!isVersionMenuOpen()) return
+        serverVersionMenu.setAttribute('open', '')
+        serverVersionMenuList.querySelector('[aria-checked="true"]')?.focus()
+    }
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+        finish()
+    } else {
+        versionMenuOpenFrame = requestAnimationFrame(finish)
+    }
+}
+server_selection_button.onclick = () => isVersionMenuOpen() ? closeVersionMenu(true) : openVersionMenu()
+server_selection_button.addEventListener('keydown', event => {
+    if(['ArrowUp', 'ArrowDown'].includes(event.key)){
+        event.preventDefault()
+        openVersionMenu()
+    }
+})
+serverVersionMenu.addEventListener('keydown', event => {
+    if(!isVersionMenuOpen()) return
+    if(event.key === 'Escape'){
+        event.preventDefault()
+        closeVersionMenu(true)
+    } else if(event.key === 'Tab'){
+        closeVersionMenu()
+    } else if(['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)){
+        event.preventDefault()
+        const items = Array.from(serverVersionMenu.querySelectorAll('button'))
+        const index = items.indexOf(document.activeElement)
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+            : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+        items[next]?.focus()
+    }
+})
+document.addEventListener('pointerdown', event => {
+    if(!serverVersionMenu.contains(event.target) && !server_selection_button.contains(event.target)) closeVersionMenu()
+})
+document.addEventListener('focusin', event => {
+    if(!serverVersionMenu.contains(event.target) && !server_selection_button.contains(event.target)) closeVersionMenu()
+})
+window.addEventListener('blur', () => closeVersionMenu())
 
 // Update Mojang Status Color
 const refreshMojangStatuses = async function(){
@@ -1744,6 +1893,7 @@ const GAME_LAUNCH_REGEX = /^\[.+\]: (?:MinecraftForge .+ Initialized|ModLauncher
 const MIN_LINGER = 5000
 
 async function dlAsync(login = true) {
+    const requestedVersionId = launchVersionId ?? ConfigManager.getSelectedServer()
 
     // Login parameter is temporary for debug purposes. Allows testing the validation/downloads without
     // launching the game.
@@ -1762,11 +1912,16 @@ async function dlAsync(login = true) {
         return
     }
 
-    const serv = distro.getServerById(ConfigManager.getSelectedServer())
+    const serv = distro.getServerById(requestedVersionId)
+    if(serv == null){
+        showLaunchFailure(Lang.queryJS('landing.launch.failureTitle'), Lang.queryJS('landing.selectedServer.versionUnavailable'))
+        return
+    }
 
     if(login) {
         if(ConfigManager.getSelectedAccount() == null){
             loggerLanding.error('You must be logged into an account.')
+            toggleLaunchArea(false)
             return
         }
     }
@@ -1779,7 +1934,7 @@ async function dlAsync(login = true) {
         ConfigManager.getCommonDirectory(),
         ConfigManager.getInstanceDirectory(),
         ConfigManager.getLauncherDirectory(),
-        ConfigManager.getSelectedServer(),
+        requestedVersionId,
         DistroAPI.isDevMode()
     )
 

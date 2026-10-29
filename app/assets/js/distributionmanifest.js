@@ -2,6 +2,7 @@ const { createHash, randomUUID } = require('node:crypto')
 const { mkdir, open, readFile, rename } = require('node:fs/promises')
 const { dirname, join } = require('node:path')
 const { Type } = require('helios-distribution-types')
+const { validateServerGroups } = require('./servergroups')
 
 const SERVER_DOWNLOAD_CONCURRENCY = 4
 const moduleTypes = new Set(Object.values(Type))
@@ -43,6 +44,7 @@ function validateDistribution(distribution) {
         }
         ids.add(server.id)
     }
+    validateServerGroups(distribution)
     return distribution
 }
 

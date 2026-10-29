@@ -1,4 +1,5 @@
 [ejs.landing]
+versionMenu = "Switch version"
 updateAvailableTooltip = "Update Available"
 usernamePlaceholder = "Username"
 usernameEditButton = "Edit"
@@ -259,6 +260,8 @@ cacheFailed = "Unable to cache background video"
 unavailable = "Background video is unavailable"
 
 [js.landing.selectedServer]
+vanilla = "Vanilla"
+versionUnavailable = "This version is unavailable. Please select another version."
 noSelection = "No Server Selected"
 loading = "Loading.."
 

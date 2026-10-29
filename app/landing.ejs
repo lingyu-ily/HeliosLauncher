@@ -95,15 +95,21 @@
                 </section>
 
                 <section id="launcherActionBar">
-                    <button id="server_selection_button" type="button" aria-label="<%- lang('landing.navServers') %>">
-                        <img id="selectedServerIcon" alt="" style="visibility: hidden;"/>
-                        <span id="selectedServerCopy">
-                            <span id="selectedServerLabel"><%- lang('landing.selectedServerLabel') %></span>
-                            <span id="selectedServerName"><%- lang('landing.launchButtonPlaceholder') %></span>
-                            <span id="selectedServerVersion"></span>
-                        </span>
-                        <span class="actionChevron" aria-hidden="true">⌄</span>
-                    </button>
+                    <div id="serverVersionPicker">
+                        <button id="server_selection_button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="serverVersionMenu" aria-label="<%- lang('landing.versionMenu') %>">
+                            <img id="selectedServerIcon" alt="" style="visibility: hidden;"/>
+                            <span id="selectedServerCopy">
+                                <span id="selectedServerLabel"><%- lang('landing.selectedServerLabel') %></span>
+                                <span id="selectedServerName"><%- lang('landing.launchButtonPlaceholder') %></span>
+                                <span id="selectedServerVersion"></span>
+                            </span>
+                            <span class="actionChevron" aria-hidden="true">⌄</span>
+                        </button>
+                        <div id="serverVersionMenu" role="menu" aria-labelledby="serverVersionMenuTitle" aria-hidden="true" hidden inert>
+                            <div id="serverVersionMenuTitle" role="presentation"><%- lang('landing.versionMenu') %></div>
+                            <div id="serverVersionMenuList"></div>
+                        </div>
+                    </div>
 
                     <div id="launch_content">
                         <button id="launch_button" disabled><%- lang('landing.launchButton') %></button>

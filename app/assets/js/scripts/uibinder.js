@@ -308,6 +308,7 @@ async function showMainUI(data){
     setTimeout(() => {
         document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.jpg')`
         $('#main').show()
+        scheduleServerBackgroundPreload(data)
 
         const isLoggedIn = Object.keys(ConfigManager.getAuthAccounts()).length > 0
 
@@ -384,11 +385,14 @@ async function loadStartupDistribution(){
         throw new Error('The distribution index does not contain a server.')
     }
 
-    if(ConfigManager.getSelectedServer() == null || data.getServerById(ConfigManager.getSelectedServer()) == null){
-        loggerUICore.info('Determining the default selected server.')
-        ConfigManager.setSelectedServer(mainServer.rawServer.id)
-        ConfigManager.save()
-    }
+    landingDistribution = data
+    const resolvedVersion = ServerGroups.resolveSelectedVersion(data, ConfigManager.getSelectedServer(), ConfigManager.getSelectedServerVersions())
+    const selectedGroup = ServerGroups.getServerGroup(data, resolvedVersion?.rawServer.id)
+    const defaultVersion = selectedGroup && ServerGroups.selectGroupVersion(selectedGroup)
+    // Resolve the previous group before discarding version choices from the last session.
+    ConfigManager.resetSelectedServerVersions()
+    ConfigManager.setSelectedServer(defaultVersion?.rawServer.id ?? mainServer.rawServer.id)
+    ConfigManager.save()
 
     loggerUICore.info(`Distribution initialization source: ${DistroAPI.getLastLoadSource() ?? 'memory'}.`)
     return data
@@ -408,11 +412,17 @@ async function initializeLauncherUI(data){
  * @param {Object} data The distro index object.
  */
 function onDistroRefresh(data){
+    landingDistribution = data
+    if(!launchInProgress){
+        const resolved = ServerGroups.resolveSelectedVersion(data, ConfigManager.getSelectedServer(), ConfigManager.getSelectedServerVersions())
+        ConfigManager.setSelectedServer(resolved?.rawServer.id ?? null)
+    }
     renderServerSidebar(data)
     syncModConfigurations(data)
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
     syncServerStatusView()
     ensureJavaSettings(data)
+    scheduleServerBackgroundPreload(data)
 }
 
 const distributionRefreshController = new DistributionRefreshController(
@@ -513,7 +523,9 @@ function syncModConfigurations(data){
         }
     }
 
-    ConfigManager.setModConfigurations(syncedCfgs)
+    const activeIds = new Set(syncedCfgs.map(entry => entry.id))
+    const retained = ConfigManager.getModConfigurations().filter(entry => !activeIds.has(entry.id))
+    ConfigManager.setModConfigurations([...syncedCfgs, ...retained])
     ConfigManager.save()
 }
 

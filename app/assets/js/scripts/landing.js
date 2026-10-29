@@ -859,10 +859,8 @@ function updateHeroMediaControls(){
         ? Lang.queryJS('landing.heroVideo.volumeMuted')
         : Lang.queryJS('landing.heroVideo.volumeValue', { volume: effectiveVolume })
     launcherHeroMediaControls.hidden = !configured
-    launcherHeroPlayToggle.textContent = playRequested ? 'Ⅱ' : '▶'
     launcherHeroPlayToggle.setAttribute('aria-pressed', playRequested.toString())
     launcherHeroPlayToggle.setAttribute('aria-label', Lang.queryJS(`landing.heroVideo.${playRequested ? 'pause' : 'play'}`))
-    launcherHeroMuteToggle.textContent = heroMediaMuted ? '🔇' : '🔊'
     launcherHeroMuteToggle.setAttribute('aria-pressed', heroMediaMuted.toString())
     launcherHeroMuteToggle.setAttribute('aria-label', Lang.queryJS(`landing.heroVideo.${heroMediaMuted ? 'unmute' : 'mute'}`))
     launcherHeroMuteToggle.disabled = disabled

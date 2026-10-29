@@ -83,9 +83,16 @@
                         <div id="launcherHeroTagline"><%- lang('landing.heroTagline') %></div>
                     </div>
                     <div id="launcherHeroMediaControls" hidden>
-                        <button id="launcherHeroPlayToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.pause') %>">Ⅱ</button>
+                        <!-- Pixelarticons (MIT), c9ecc2da61afde85dbe539025e3d931c6152ad75. See assets/images/icons/pixelarticons-LICENSE.txt. -->
+                        <button id="launcherHeroPlayToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.pause') %>">
+                            <svg class="heroMediaIcon heroMediaIconPlay" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 11h-2V9h2zm0 4h-2v-2h2zm-2 2h-2v-2h2zm0-8h-2V7h2zm-2-2H9V5h2zM9 21H7V3h2zm6-8h2v-2h-2zm-6 4h2v2H9z"/></svg>
+                            <svg class="heroMediaIcon heroMediaIconPause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 20H4V4h6v16Zm8-16v16h-6V4h6Zm-4 2v12h2V6h-2ZM6 18h2V6H6v12Z"/></svg>
+                        </button>
                         <div id="launcherHeroVolumeControl" data-disabled>
-                            <button id="launcherHeroMuteToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.unmute') %>">🔇</button>
+                            <button id="launcherHeroMuteToggle" type="button" aria-pressed="true" aria-label="<%- lang('landing.heroVideo.unmute') %>">
+                                <svg class="heroMediaIcon heroMediaIconMuted" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 22h-2v-2H9v-2h2V6H9V4h2V2h2v20Zm-4-4H7v-2h2v2Zm-2-8H5v4h2v2H3V8h4v2Zm10.001 5.224h-2v-2H17v-2h-1.999v-2h2v2H19v2h-1.999v2Zm3.999 0h-2v-2h2v2Zm0-4h-2v-2h2v2ZM9 8H7V6h2v2Z"/></svg>
+                                <svg class="heroMediaIcon heroMediaIconVolume" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 22h-2v-2H9v-2h2V6H9V4h2V2h2v20Zm-4-4H7v-2h2v2Zm10 0h-4v-2h4v2ZM7 10H5v4h2v2H3V8h4v2Zm14 6h-2V8h2v8Zm-4-2h-2v-4h2v4ZM9 8H7V6h2v2Zm10 0h-4V6h4v2Z"/></svg>
+                            </button>
                             <div id="launcherHeroVolumePopover">
                                 <input id="launcherHeroVolumeSlider" type="range" min="0" max="100" step="1" value="0" aria-label="<%- lang('landing.heroVideo.volume') %>">
                             </div>
